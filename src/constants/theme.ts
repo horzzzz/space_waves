@@ -15,6 +15,13 @@ export const Palette = {
   skyMid: '#63B6EE',
   skyBottom: '#B9E4FB',
 
+  /**
+   * Fallback painted behind every screen (Stack `contentStyle`, the gameplay
+   * canvas container) before its own sky art has painted over it. Dark navy so it
+   * blends with all 8 sky skins instead of flashing a mismatched color.
+   */
+  screenBase: '#0B1E3A',
+
   /** Brushed metal panel chrome. */
   metalLight: '#D6DAE0',
   metalMid: '#A7ADB6',

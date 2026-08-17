@@ -52,7 +52,7 @@ export default function RootLayout() {
             screenOptions={{
               headerShown: false,
               animation: 'fade',
-              contentStyle: { backgroundColor: Palette.skyTop },
+              contentStyle: { backgroundColor: Palette.screenBase },
             }}
           />
         </GameStateProvider>
