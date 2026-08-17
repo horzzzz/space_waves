@@ -145,7 +145,11 @@ export default function GameScreen() {
 
       <SafeAreaView style={styles.hud} pointerEvents="box-none" edges={['top']}>
         <View style={styles.hudBar} pointerEvents="box-none">
-          <IconButton name="pause" accessibilityLabel="Pause" onPress={handlePause} />
+          <IconButton
+            icon={require('@/assets/game/icons/pause.png')}
+            accessibilityLabel="Pause"
+            onPress={handlePause}
+          />
         </View>
       </SafeAreaView>
 

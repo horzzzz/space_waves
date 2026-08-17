@@ -61,7 +61,11 @@ export default function MenuScreen() {
     <SkyBackground>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.topBar}>
-          <IconButton name="settings-sharp" accessibilityLabel="Settings" onPress={() => router.push('/settings')} />
+          <IconButton
+            icon={require('@/assets/game/icons/settings.png')}
+            accessibilityLabel="Settings"
+            onPress={() => router.push('/settings')}
+          />
           <View style={styles.spacer} />
           <CoinBadge amount={save.coins} />
         </View>
@@ -80,8 +84,6 @@ export default function MenuScreen() {
             <IconTile icon="trophy" label="Ranks" onPress={() => router.push('/leaderboard')} />
             <IconTile icon="gift" label="Bonus" onPress={() => setShowDaily(true)} badge={dailyReady} />
           </View>
-
-          <GameButton label="Customize" tone="gold" onPress={() => router.push('/shop')} />
         </View>
 
         <Text style={styles.legal}>

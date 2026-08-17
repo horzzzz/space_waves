@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -14,11 +15,15 @@ function Stars({ count }: { count: number }) {
   return (
     <View style={styles.stars}>
       {[0, 1, 2].map((index) => (
-        <Ionicons
+        <Image
           key={index}
-          name="star"
-          size={9}
-          color={index < count ? Palette.gold : 'rgba(255,255,255,0.22)'}
+          source={
+            index < count
+              ? require('@/assets/game/icons/star-filled.png')
+              : require('@/assets/game/icons/star-empty.png')
+          }
+          style={styles.star}
+          contentFit="contain"
         />
       ))}
     </View>
@@ -139,5 +144,9 @@ const styles = StyleSheet.create({
   stars: {
     flexDirection: 'row',
     gap: 1,
+  },
+  star: {
+    width: 10,
+    height: 10,
   },
 });

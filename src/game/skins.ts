@@ -1,8 +1,7 @@
 /**
  * Customization catalog for the shop: plane, trail and sky.
  *
- * Plane and sky skins are backed by real Figma-exported artwork; trail skins stay
- * color-only since the trail is a procedural gradient stroke.
+ * All three are backed by real Figma-exported artwork.
  */
 
 import type { ImageSourcePropType } from 'react-native';
@@ -21,8 +20,7 @@ export type PlaneSkin = BaseSkin & {
 };
 
 export type TrailSkin = BaseSkin & {
-  /** Head and tail colors of the trail gradient. */
-  colors: readonly [string, string];
+  image: ImageSourcePropType;
 };
 
 export type SkySkin = BaseSkin & {
@@ -45,14 +43,14 @@ export const PLANE_SKINS: readonly PlaneSkin[] = [
 ];
 
 export const TRAIL_SKINS: readonly TrailSkin[] = [
-  { id: 'smoke', name: 'Smoke', price: 0, colors: ['#FFFFFF', 'rgba(255,255,255,0)'] },
-  { id: 'aqua', name: 'Aqua', price: 500, colors: ['#7FE9FF', 'rgba(127,233,255,0)'] },
-  { id: 'fire', name: 'Fire', price: 1000, colors: ['#FFB03A', 'rgba(226,69,59,0)'] },
-  { id: 'toxic', name: 'Toxic', price: 1500, colors: ['#B6F13A', 'rgba(93,182,26,0)'] },
-  { id: 'candy', name: 'Candy', price: 2000, colors: ['#FF8AD1', 'rgba(160,92,214,0)'] },
-  { id: 'ice', name: 'Ice', price: 2500, colors: ['#CFEBFF', 'rgba(94,166,224,0)'] },
-  { id: 'ember', name: 'Ember', price: 3000, colors: ['#FF5F3A', 'rgba(90,10,40,0)'] },
-  { id: 'royal', name: 'Royal', price: 4000, colors: ['#FFD75E', 'rgba(138,92,214,0)'] },
+  { id: 'smoke', name: 'Smoke', price: 0, image: require('@/assets/game/trail/smoke.png') },
+  { id: 'aqua', name: 'Aqua', price: 500, image: require('@/assets/game/trail/aqua.png') },
+  { id: 'fire', name: 'Fire', price: 1000, image: require('@/assets/game/trail/fire.png') },
+  { id: 'toxic', name: 'Toxic', price: 1500, image: require('@/assets/game/trail/toxic.png') },
+  { id: 'candy', name: 'Candy', price: 2000, image: require('@/assets/game/trail/candy.png') },
+  { id: 'ice', name: 'Ice', price: 2500, image: require('@/assets/game/trail/ice.png') },
+  { id: 'ember', name: 'Ember', price: 3000, image: require('@/assets/game/trail/ember.png') },
+  { id: 'royal', name: 'Royal', price: 4000, image: require('@/assets/game/trail/royal.png') },
 ];
 
 export const SKY_SKINS: readonly SkySkin[] = [

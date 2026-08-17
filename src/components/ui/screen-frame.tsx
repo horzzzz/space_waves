@@ -38,7 +38,13 @@ export function ScreenFrame({ children, title, onBack, showBack = true, coins, c
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.topBar}>
           <View style={styles.topBarSide}>
-            {showBack && <IconButton name="arrow-back" accessibilityLabel="Go back" onPress={handleBack} />}
+            {showBack && (
+              <IconButton
+                icon={require('@/assets/game/icons/back.png')}
+                accessibilityLabel="Go back"
+                onPress={handleBack}
+              />
+            )}
           </View>
           {title ? (
             <Text style={[Type.heading, styles.title]} numberOfLines={1}>

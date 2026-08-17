@@ -31,8 +31,6 @@ export const STATUS_PAUSED = 4;
 export const SHIP_RADIUS = 0.026;
 /** Where the ship sits horizontally on screen, as a fraction of width. */
 export const SHIP_SCREEN_X = 0.3;
-/** Number of ship positions retained for drawing the trail. */
-export const TRAIL_SAMPLES = 40;
 
 type Callbacks = {
   onCrash: () => void;
@@ -49,11 +47,6 @@ export type WaveEngine = {
   status: SharedValue<number>;
   /** Seconds since the run began. */
   elapsed: SharedValue<number>;
-  /** Ring buffers of recent ship positions, used to draw the trail. */
-  trailX: SharedValue<number[]>;
-  trailY: SharedValue<number[]>;
-  /** Index of the most recently written trail sample. */
-  trailHead: SharedValue<number>;
   start: () => void;
   reset: () => void;
   pause: () => void;
@@ -75,10 +68,6 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
   const elapsed = useSharedValue(0);
 
   const obstacleCursor = useSharedValue(0);
-
-  const trailX = useSharedValue<number[]>(new Array(TRAIL_SAMPLES).fill(0));
-  const trailY = useSharedValue<number[]>(new Array(TRAIL_SAMPLES).fill(0.5));
-  const trailHead = useSharedValue(0);
 
   // Flatten the level into plain number arrays so the worklet closure stays cheap
   // to serialize onto the UI runtime.
@@ -115,14 +104,6 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
 
     shipX.value = nextX;
     shipY.value = nextY;
-
-    // Ring buffer written in place. Both the write and the renderer's read happen
-    // on the UI thread, so this deliberately skips the per-frame cross-thread sync
-    // that reassigning `.value` would trigger.
-    const head = (trailHead.value + 1) % TRAIL_SAMPLES;
-    trailX.value[head] = nextX;
-    trailY.value[head] = nextY;
-    trailHead.value = head;
 
     if (nextX >= geometry.length) {
       status.value = STATUS_WON;
@@ -176,11 +157,8 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     holding.value = 0;
     elapsed.value = 0;
     obstacleCursor.value = 0;
-    trailX.value = new Array(TRAIL_SAMPLES).fill(0);
-    trailY.value = new Array(TRAIL_SAMPLES).fill(startY);
-    trailHead.value = 0;
     status.value = STATUS_READY;
-  }, [level, shipX, shipY, holding, elapsed, obstacleCursor, trailX, trailY, trailHead, status]);
+  }, [level, shipX, shipY, holding, elapsed, obstacleCursor, status]);
 
   const start = useCallback(() => {
     if (status.value === STATUS_READY) status.value = STATUS_RUNNING;
@@ -207,9 +185,6 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     holding,
     status,
     elapsed,
-    trailX,
-    trailY,
-    trailHead,
     start,
     reset,
     pause,

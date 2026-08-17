@@ -22,7 +22,7 @@ import {
 } from '@shopify/react-native-skia';
 import { useDerivedValue, type SharedValue } from 'react-native-reanimated';
 
-import { SHIP_RADIUS, SHIP_SCREEN_X, TRAIL_SAMPLES, type WaveEngine } from '@/game/engine';
+import { SHIP_RADIUS, SHIP_SCREEN_X, type WaveEngine } from '@/game/engine';
 import { SEGMENT_WIDTH, type Level, type Obstacle } from '@/game/levels';
 import type { PlaneSkin, SkySkin, TrailSkin } from '@/game/skins';
 
@@ -49,7 +49,7 @@ const CLOUD_SPAN = 2800;
 const CLOUD_PARALLAX = 0.35;
 
 export function GameRenderer({ engine, level, width, height, plane, trail, sky }: Props) {
-  const { shipX, shipY, holding, elapsed, trailX, trailY, trailHead } = engine;
+  const { shipX, shipY, holding, elapsed } = engine;
 
   const shipRadiusPx = SHIP_RADIUS * height;
   const shipScreenX = width * SHIP_SCREEN_X;
@@ -129,39 +129,22 @@ export function GameRenderer({ engine, level, width, height, plane, trail, sky }
     return path;
   });
 
-  // --- Trail ----------------------------------------------------------------
-  const trailPath = useDerivedValue(() => {
-    const path = Skia.Path.Make();
-    const camera = cameraX.value;
-    const head = trailHead.value;
-    const xs = trailX.value;
-    const ys = trailY.value;
-
-    let started = false;
-    for (let step = 1; step <= TRAIL_SAMPLES; step += 1) {
-      const index = (head + step) % TRAIL_SAMPLES;
-      const px = xs[index] - camera;
-      const py = ys[index] * height;
-      if (px < -60) continue;
-      if (!started) {
-        path.moveTo(px, py);
-        started = true;
-      } else {
-        path.lineTo(px, py);
-      }
-    }
-
-    return path;
-  });
-
-  const trailStart = useDerivedValue(() => vec(Math.max(0, shipScreenX - 220), 0));
-  const trailEnd = useDerivedValue(() => vec(shipScreenX, 0));
-
   // --- Ship -----------------------------------------------------------------
   const shipImage = useImage(plane.image as DataSourceParam);
   const shipWidth = shipRadiusPx * 3.4;
   const shipAspect = shipImage ? shipImage.width() / shipImage.height() : 1.37;
   const shipHeight = shipWidth / shipAspect;
+
+  // --- Trail ------------------------------------------------------------
+  // A plain sprite riding in the ship's own Group (so it inherits the exact same
+  // position/rotation as the ship, no separate path-following math). Sized off the
+  // ship's own on-screen width so it scales consistently across devices, and
+  // cropped with `fit="cover"` rather than stretched to the source's native ~16:1
+  // aspect, since showing the whole elongated strip at a small scale reads as a
+  // faint scratchy line rather than the bold streak in the source art.
+  const trailImage = useImage(trail.image as DataSourceParam);
+  const trailWidth = shipWidth * 1.9;
+  const trailHeight = shipRadiusPx * 1.1;
 
   const shipTransform = useDerivedValue(() => {
     // Tilt to match the actual flight vector so the nose points where it travels.
@@ -218,12 +201,18 @@ export function GameRenderer({ engine, level, width, height, plane, trail, sky }
         />
       ))}
 
-      {/* Trail, drawn under the ship */}
-      <Path path={trailPath} style="stroke" strokeWidth={shipRadiusPx * 0.7} strokeCap="round" strokeJoin="round">
-        <LinearGradient start={trailStart} end={trailEnd} colors={[trail.colors[1], trail.colors[0]]} />
-      </Path>
-
       <Group transform={shipTransform}>
+        {/* Trail, drawn first so the ship sits on top of it */}
+        {trailImage && (
+          <SkiaImage
+            image={trailImage}
+            x={-shipWidth / 2 - trailWidth * 0.9}
+            y={-trailHeight / 2}
+            width={trailWidth}
+            height={trailHeight}
+            fit="cover"
+          />
+        )}
         {shipImage && (
           <SkiaImage
             image={shipImage}

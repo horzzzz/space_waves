@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
 
@@ -42,7 +42,7 @@ export function GameDialog({ visible, title, children, onClose, dismissable = tr
 
         {onClose && (
           <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={18} color={Palette.textPrimary} />
+            <Image source={require('@/assets/game/icons/close.png')} style={styles.closeIcon} contentFit="contain" />
           </Pressable>
         )}
       </Animated.View>
@@ -81,15 +81,13 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: -10,
-    right: -10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Palette.inkFace,
-    borderWidth: 2,
-    borderColor: Palette.metalEdge,
+    top: -14,
+    right: -14,
+    width: 34,
+    height: 34,
+  },
+  closeIcon: {
+    width: '100%',
+    height: '100%',
   },
 });
