@@ -108,7 +108,12 @@ export function GameButton({
             borderColor: Palette.metalEdge,
             overflow: 'hidden',
           }}>
-          <LinearGradient colors={Gradients.metal} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
+          <View>
+            <Image
+              source={require('@/assets/game/ui/metal-texture.png')}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+            />
             {/* Top rail */}
             <LinearGradient colors={RAIL_BY_TONE[tone]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={{ height: 4 }} />
 
@@ -137,7 +142,7 @@ export function GameButton({
 
             {/* Bottom rail */}
             <LinearGradient colors={RAIL_BY_TONE[tone]} start={{ x: 0, y: 1 }} end={{ x: 0, y: 0 }} style={{ height: 4 }} />
-          </LinearGradient>
+          </View>
         </View>
       )}
 

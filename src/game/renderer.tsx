@@ -12,11 +12,9 @@ import {
   Canvas,
   Group,
   Image as SkiaImage,
-  LinearGradient,
   Path,
   Skia,
   useImage,
-  vec,
   type DataSourceParam,
   type SkImage,
 } from '@shopify/react-native-skia';
@@ -48,11 +46,17 @@ const CLOUD_PATTERN = [
 const CLOUD_SPAN = 2800;
 const CLOUD_PARALLAX = 0.35;
 
+/** Size of one stone tile, in px — roughly ~6x SEGMENT_WIDTH. */
+const WALL_TILE_SIZE = 220;
+
 export function GameRenderer({ engine, level, width, height, plane, trail, sky }: Props) {
   const { shipX, shipY, holding, elapsed } = engine;
 
   const shipRadiusPx = SHIP_RADIUS * height;
   const shipScreenX = width * SHIP_SCREEN_X;
+  // +3 covers the -1 lead-in tile from the wrap math below, the fractional-camera
+  // partial tile at each edge, and one spare.
+  const wallTileCount = Math.ceil(width / WALL_TILE_SIZE) + 3;
 
   /** World x at the left edge of the screen. */
   const cameraX = useDerivedValue(() => shipX.value - shipScreenX);
@@ -101,6 +105,8 @@ export function GameRenderer({ engine, level, width, height, plane, trail, sky }
 
     return path;
   });
+
+  const stoneImage = useImage(require('@/assets/game/walls/stone.png'));
 
   // --- Obstacles ------------------------------------------------------------
   const fanImage = useImage(require('@/assets/game/obstacles/fan.png'));
@@ -183,9 +189,13 @@ export function GameRenderer({ engine, level, width, height, plane, trail, sky }
       <Path path={finishPath} color="rgba(255,255,255,0.9)" />
 
       {/* Corridor */}
-      <Path path={wallsPath}>
-        <LinearGradient start={vec(0, 0)} end={vec(0, height)} colors={[sky.wall, sky.wallShade]} />
-      </Path>
+      {stoneImage && (
+        <Group clip={wallsPath}>
+          {Array.from({ length: wallTileCount }, (_, index) => (
+            <WallStoneTile key={index} index={index} cameraX={cameraX} height={height} image={stoneImage} />
+          ))}
+        </Group>
+      )}
       <Path path={wallEdgePath} style="stroke" strokeWidth={3} color="rgba(255,255,255,0.35)" />
 
       {level.obstacles.map((obstacle, index) => (
@@ -271,6 +281,33 @@ function ObstacleSprite({
   return (
     <Group transform={transform}>
       <SkiaImage image={image} x={-size / 2} y={-size / 2} width={size} height={size} fit="contain" />
+    </Group>
+  );
+}
+
+type WallStoneTileProps = {
+  index: number;
+  cameraX: SharedValue<number>;
+  height: number;
+  image: SkImage;
+};
+
+/**
+ * One repeating stone tile. `index` is this instance's fixed slot; each frame it
+ * re-derives which world tile belongs in that slot from the camera position —
+ * fixed component count, continuous tiling, same wrap idea as `cloudsPath`'s `cycle`.
+ */
+function WallStoneTile({ index, cameraX, height, image }: WallStoneTileProps) {
+  const transform = useDerivedValue(() => {
+    const camera = cameraX.value;
+    const baseIndex = Math.floor(camera / WALL_TILE_SIZE) - 1;
+    const worldIndex = baseIndex + index;
+    return [{ translateX: worldIndex * WALL_TILE_SIZE - camera }];
+  });
+
+  return (
+    <Group transform={transform}>
+      <SkiaImage image={image} x={0} y={0} width={WALL_TILE_SIZE} height={height} fit="cover" />
     </Group>
   );
 }

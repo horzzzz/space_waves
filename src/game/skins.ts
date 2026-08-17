@@ -25,9 +25,6 @@ export type TrailSkin = BaseSkin & {
 
 export type SkySkin = BaseSkin & {
   image: ImageSourcePropType;
-  /** Tint applied to the rock walls so they read against the sky. */
-  wall: string;
-  wallShade: string;
 };
 
 export const PLANE_SKINS: readonly PlaneSkin[] = [
@@ -54,14 +51,14 @@ export const TRAIL_SKINS: readonly TrailSkin[] = [
 ];
 
 export const SKY_SKINS: readonly SkySkin[] = [
-  { id: 'day', name: 'Clear Day', price: 0, image: require('@/assets/game/sky/day.png'), wall: '#7C8896', wallShade: '#4A535E' },
-  { id: 'sunset', name: 'Sunset', price: 500, image: require('@/assets/game/sky/sunset.png'), wall: '#6B5A70', wallShade: '#3D3244' },
-  { id: 'night', name: 'Night', price: 1000, image: require('@/assets/game/sky/night.png'), wall: '#3A4258', wallShade: '#1E2333' },
-  { id: 'dawn', name: 'Dawn', price: 1500, image: require('@/assets/game/sky/dawn.png'), wall: '#7A6A80', wallShade: '#463C50' },
-  { id: 'storm', name: 'Storm', price: 2000, image: require('@/assets/game/sky/storm.png'), wall: '#59626E', wallShade: '#333A44' },
-  { id: 'aurora', name: 'Aurora', price: 2500, image: require('@/assets/game/sky/aurora.png'), wall: '#33505A', wallShade: '#1A2A32' },
-  { id: 'nebula', name: 'Nebula', price: 3000, image: require('@/assets/game/sky/nebula.png'), wall: '#4A3560', wallShade: '#281A38' },
-  { id: 'cosmic', name: 'Cosmic Crest', price: 4000, image: require('@/assets/game/sky/cosmic.png'), wall: '#2E3A55', wallShade: '#161C2C' },
+  { id: 'day', name: 'Clear Day', price: 0, image: require('@/assets/game/sky/day.png') },
+  { id: 'sunset', name: 'Sunset', price: 500, image: require('@/assets/game/sky/sunset.png') },
+  { id: 'night', name: 'Night', price: 1000, image: require('@/assets/game/sky/night.png') },
+  { id: 'dawn', name: 'Dawn', price: 1500, image: require('@/assets/game/sky/dawn.png') },
+  { id: 'storm', name: 'Storm', price: 2000, image: require('@/assets/game/sky/storm.png') },
+  { id: 'aurora', name: 'Aurora', price: 2500, image: require('@/assets/game/sky/aurora.png') },
+  { id: 'nebula', name: 'Nebula', price: 3000, image: require('@/assets/game/sky/nebula.png') },
+  { id: 'cosmic', name: 'Cosmic Crest', price: 4000, image: require('@/assets/game/sky/cosmic.png') },
 ];
 
 export const DEFAULT_SKINS = {

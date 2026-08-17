@@ -50,7 +50,12 @@ function LevelTile({
       onPress={onPress}
       style={styles.tileWrapper}>
       <View style={styles.tileBorder}>
-        <LinearGradient colors={Gradients.metal} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={styles.tileFrame}>
+        <View style={styles.tileFrame}>
+          <Image
+            source={require('@/assets/game/ui/metal-texture.png')}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+          />
           <LinearGradient
             colors={unlocked ? Gradients.ink : ['#5C636D', '#414852']}
             start={{ x: 0, y: 0 }}
@@ -68,7 +73,7 @@ function LevelTile({
               </>
             )}
           </LinearGradient>
-        </LinearGradient>
+        </View>
       </View>
     </Pressable>
   );

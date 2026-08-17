@@ -1,5 +1,6 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Gradients, Palette, Radius, Spacing } from '@/constants/theme';
 
@@ -45,7 +46,12 @@ export function MetalPanel({ children, screws = true, style, contentStyle }: Pro
         },
         style,
       ]}>
-      <LinearGradient colors={Gradients.metal} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
+      <View>
+        <Image
+          source={require('@/assets/game/ui/metal-texture.png')}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+        />
         <View
           style={[
             { padding: Spacing.four, borderRadius: Radius.large - 2, borderWidth: 1, borderColor: 'rgba(255,255,255,0.45)' },
@@ -61,7 +67,7 @@ export function MetalPanel({ children, screws = true, style, contentStyle }: Pro
             <Screw />
           </>
         )}
-      </LinearGradient>
+      </View>
     </View>
   );
 }

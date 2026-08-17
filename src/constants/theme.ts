@@ -110,7 +110,6 @@ export const Type = {
 /** Gradient stop tuples, shared so panels and buttons stay consistent. */
 export const Gradients = {
   sky: [Palette.skyTop, Palette.skyMid, Palette.skyBottom],
-  metal: [Palette.metalLight, Palette.metalMid, Palette.metalDark],
   metalInset: [Palette.metalDark, Palette.metalMid],
   ink: [Palette.inkFaceLift, Palette.inkFace],
   lime: [Palette.limeLight, Palette.lime, Palette.limeDark],
