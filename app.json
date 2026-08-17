@@ -42,14 +42,23 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#0B1E3A",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 160
+          "image": "./assets/images/logo.png",
+          "imageWidth": 260
         }
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
+    },
+    "extra": {
+      "startIo": {
+        "androidAppId": "",
+        "iosAppId": ""
+      },
+      "legal": {
+        "termsUrl": "https://spacewaves.example.com/terms",
+        "privacyUrl": "https://spacewaves.example.com/privacy"
+      }
     }
   }
 }

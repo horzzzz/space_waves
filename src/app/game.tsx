@@ -1,0 +1,258 @@
+import { Image } from 'expo-image';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { BoostReward } from '@/components/game/boost-reward';
+import { CoinBadge } from '@/components/ui/coin-badge';
+import { GameButton } from '@/components/ui/game-button';
+import { GameDialog } from '@/components/ui/game-dialog';
+import { IconButton } from '@/components/ui/icon-button';
+import { InkPlate } from '@/components/ui/metal-panel';
+import { Palette, Spacing, Type } from '@/constants/theme';
+import { useWaveEngine } from '@/game/engine';
+import { getLevel, rewardForLevel, starsForRun, TOTAL_LEVELS } from '@/game/levels';
+import { GameRenderer } from '@/game/renderer';
+import { getPlaneSkin, getSkySkin, getTrailSkin } from '@/game/skins';
+import { reportGame } from '@/services/analytics';
+import { playMusic, playSfx, stopMusic, vibrate } from '@/services/audio';
+import { useGameState } from '@/state/store';
+
+type Phase = 'ready' | 'playing' | 'paused' | 'won' | 'crashed';
+
+export default function GameScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ level?: string }>();
+  const { width, height } = useWindowDimensions();
+  const { save, completeLevel, addCoins } = useGameState();
+
+  const levelId = Math.min(TOTAL_LEVELS, Math.max(1, Number(params.level) || 1));
+  const level = useMemo(() => getLevel(levelId), [levelId]);
+
+  const [phase, setPhase] = useState<Phase>('ready');
+
+  const plane = getPlaneSkin(save.selectedSkins.plane);
+  const trail = getTrailSkin(save.selectedSkins.trail);
+  const sky = getSkySkin(save.selectedSkins.sky);
+
+  const handleCrash = useCallback(() => {
+    setPhase('crashed');
+    reportGame('loss');
+    playSfx('crash');
+    vibrate('error');
+  }, []);
+
+  const handleWin = useCallback(() => {
+    setPhase('won');
+    reportGame('win');
+    playSfx('win');
+    vibrate('success');
+  }, []);
+
+  const callbacks = useMemo(() => ({ onCrash: handleCrash, onWin: handleWin }), [handleCrash, handleWin]);
+
+  const engine = useWaveEngine(level, height, callbacks);
+
+  const stars = starsForRun();
+  const baseReward = rewardForLevel(levelId);
+
+  // Bank progress as soon as the level is cleared; the coin payout is settled
+  // separately once the player has decided about the boost. `completeLevel`
+  // writes to the persisted save store, an external system, so this is a genuine
+  // effect rather than something derivable during render.
+  useEffect(() => {
+    if (phase !== 'won') return;
+    completeLevel(levelId, stars);
+  }, [phase, levelId, stars, completeLevel]);
+
+  useEffect(() => {
+    playMusic('game');
+    return () => stopMusic();
+  }, []);
+
+  const restart = useCallback(() => {
+    engine.reset();
+    setPhase('ready');
+  }, [engine]);
+
+  // Restart cleanly whenever the level changes (e.g. Next Level).
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets run state when navigating to a different level id
+    restart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [levelId]);
+
+  const beginRun = () => {
+    if (phase !== 'ready') return;
+    setPhase('playing');
+    reportGame('start');
+    engine.start();
+  };
+
+  const handlePressIn = () => {
+    if (phase === 'ready') beginRun();
+    if (phase === 'ready' || phase === 'playing') engine.setHolding(true);
+  };
+
+  const handlePressOut = () => {
+    engine.setHolding(false);
+  };
+
+  const handlePause = () => {
+    if (phase !== 'playing') return;
+    engine.pause();
+    engine.setHolding(false);
+    setPhase('paused');
+  };
+
+  const handleResume = () => {
+    setPhase('playing');
+    engine.resume();
+  };
+
+  const goToMenu = () => router.replace('/menu');
+
+  const goToNextLevel = () => {
+    const next = Math.min(TOTAL_LEVELS, levelId + 1);
+    router.replace({ pathname: '/game', params: { level: String(next) } });
+  };
+
+  const settleReward = (amount: number) => addCoins(amount);
+
+  const isOverlayOpen = phase === 'paused' || phase === 'won' || phase === 'crashed';
+
+  return (
+    <View style={styles.container}>
+      <GameRenderer
+        engine={engine}
+        level={level}
+        width={width}
+        height={height}
+        plane={plane}
+        trail={trail}
+        sky={sky}
+      />
+
+      {/* Control surface: hold to climb, release to dive. */}
+      <Pressable
+        accessibilityLabel="Hold to climb"
+        style={StyleSheet.absoluteFill}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={isOverlayOpen}
+      />
+
+      <SafeAreaView style={styles.hud} pointerEvents="box-none" edges={['top']}>
+        <View style={styles.hudBar} pointerEvents="box-none">
+          <IconButton name="pause" accessibilityLabel="Pause" onPress={handlePause} />
+        </View>
+      </SafeAreaView>
+
+      {phase === 'ready' && (
+        <View style={styles.tapHint} pointerEvents="none">
+          <Text style={styles.tapHintText}>Tap and hold to fly</Text>
+          <Text style={styles.tapHintSub}>Release to dive</Text>
+        </View>
+      )}
+
+      <GameDialog visible={phase === 'paused'} title="Paused" dismissable={false}>
+        <View style={styles.dialogBody}>
+          <GameButton label="Play" onPress={handleResume} />
+          <GameButton label="Restart" onPress={restart} />
+          <GameButton label="Main Menu" onPress={goToMenu} />
+        </View>
+      </GameDialog>
+
+      <GameDialog visible={phase === 'won'} title="You Win!" dismissable={false}>
+        <View style={styles.dialogBody}>
+          <Image
+            source={require('@/assets/game/scenes/level-complete.png')}
+            style={styles.sceneArt}
+            contentFit="contain"
+          />
+          <InkPlate>
+            <Text style={[Type.body, styles.centered]}>
+              Level {levelId} complete — {stars} of 3 stars
+            </Text>
+            <View style={styles.rewardRow}>
+              <CoinBadge amount={baseReward} size={18} />
+            </View>
+          </InkPlate>
+
+          <BoostReward baseAmount={baseReward} onSettled={settleReward} />
+
+          <GameButton
+            label={levelId >= TOTAL_LEVELS ? 'Main Menu' : 'Next Level'}
+            onPress={levelId >= TOTAL_LEVELS ? goToMenu : goToNextLevel}
+          />
+          <GameButton label="Main Menu" onPress={goToMenu} />
+        </View>
+      </GameDialog>
+
+      <GameDialog visible={phase === 'crashed'} title="You Crashed" dismissable={false}>
+        <View style={styles.dialogBody}>
+          <Image source={require('@/assets/game/scenes/crash.png')} style={styles.sceneArt} contentFit="contain" />
+          <GameButton label="Restart" onPress={restart} />
+          <GameButton label="Main Menu" onPress={goToMenu} />
+        </View>
+      </GameDialog>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Palette.skyTop,
+  },
+  hud: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  hudBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.two,
+  },
+  tapHint: {
+    position: 'absolute',
+    bottom: '18%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
+  tapHintText: {
+    ...Type.heading,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  tapHintSub: {
+    ...Type.body,
+    color: 'rgba(255,255,255,0.85)',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  dialogBody: {
+    gap: Spacing.three,
+  },
+  sceneArt: {
+    width: '100%',
+    height: 160,
+    alignSelf: 'center',
+  },
+  centered: {
+    textAlign: 'center',
+    color: Palette.textPrimary,
+  },
+  rewardRow: {
+    alignItems: 'center',
+    marginTop: Spacing.two,
+  },
+});
