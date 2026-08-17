@@ -53,9 +53,11 @@ export function ScreenFrame({ children, title, onBack, showBack = true, coins, c
           ) : (
             <View style={styles.flex} />
           )}
-          <View style={[styles.topBarSide, styles.alignEnd]}>
-            {coins !== undefined && <CoinBadge amount={coins} />}
-          </View>
+          {coins !== undefined && (
+            <View style={[styles.topBarSide, styles.alignEnd]}>
+              <CoinBadge amount={coins} />
+            </View>
+          )}
         </View>
 
         <View style={[styles.content, contentStyle]}>{children}</View>

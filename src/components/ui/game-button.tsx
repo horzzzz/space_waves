@@ -31,6 +31,8 @@ type Props = {
   compact?: boolean;
   /** Shows the red attention dot (with a count) used for unread/available notices. */
   badge?: number;
+  /** Most labels in the design are all-caps, but some are sentence case as typed — set false to render as-is. */
+  uppercase?: boolean;
 };
 
 const RAIL_BY_TONE: Record<Exclude<ButtonTone, 'default'>, readonly [string, string, string]> = {
@@ -52,6 +54,7 @@ export function GameButton({
   style,
   compact = false,
   badge,
+  uppercase = true,
 }: Props) {
   const pressed = useSharedValue(0);
   const { width: windowWidth } = useWindowDimensions();
@@ -67,7 +70,7 @@ export function GameButton({
       <Text
         numberOfLines={1}
         style={[Type.button, { fontSize: (compact ? 15 : Type.button.fontSize) * fontScale }]}>
-        {label.toUpperCase()}
+        {uppercase ? label.toUpperCase() : label}
       </Text>
     </>
   );

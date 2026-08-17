@@ -4,33 +4,41 @@ import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-n
 import { GameButton } from '@/components/ui/game-button';
 import { MetalPanel, InkPlate } from '@/components/ui/metal-panel';
 import { ScreenFrame } from '@/components/ui/screen-frame';
-import { MaxContentWidth, Palette, Spacing, Type } from '@/constants/theme';
+import { DisplayFont, MaxContentWidth, Palette, Spacing, Type } from '@/constants/theme';
 import { useGameState } from '@/state/store';
+
+const CARD_WIDTH_RATIO = 0.86;
+const CARD_GAP = Spacing.three;
 
 export default function ModeScreen() {
   const router = useRouter();
-  const { save, unlockedLevel } = useGameState();
+  const { unlockedLevel } = useGameState();
   const { width } = useWindowDimensions();
 
-  const cardWidth = Math.min(width, MaxContentWidth) - Spacing.four * 2;
+  const contentWidth = Math.min(width, MaxContentWidth);
+  const cardWidth = contentWidth * CARD_WIDTH_RATIO;
+  const sidePad = (contentWidth - cardWidth) / 2;
 
   return (
-    <ScreenFrame title="Mode" coins={save.coins} contentStyle={styles.content}>
+    <ScreenFrame title="Mode" contentStyle={styles.content}>
       <ScrollView
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
+        decelerationRate="fast"
+        snapToInterval={cardWidth + CARD_GAP}
+        snapToAlignment="start"
         style={styles.pager}
-        contentContainerStyle={styles.pagerContent}>
+        contentContainerStyle={{ paddingHorizontal: sidePad, gap: CARD_GAP }}>
         <View style={[styles.page, { width: cardWidth }]}>
           <MetalPanel contentStyle={styles.card}>
             <Text style={[Type.title, styles.cardTitle]}>CLASSIC</Text>
             <InkPlate>
               <Text style={[Type.body, styles.cardText]}>Reach the finish to complete levels</Text>
             </InkPlate>
-            <GameButton label="Select level" onPress={() => router.push('/levels')} />
+            <GameButton label="Select level" uppercase={false} onPress={() => router.push('/levels')} />
             <GameButton
               label="Start"
+              uppercase={false}
               onPress={() => router.push({ pathname: '/game', params: { level: String(unlockedLevel) } })}
             />
           </MetalPanel>
@@ -60,10 +68,6 @@ const styles = StyleSheet.create({
   pager: {
     flexGrow: 0,
   },
-  pagerContent: {
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
   page: {
     justifyContent: 'center',
   },
@@ -77,15 +81,15 @@ const styles = StyleSheet.create({
   cardText: {
     textAlign: 'center',
     color: Palette.textPrimary,
+    fontFamily: DisplayFont,
+    fontSize: 20,
+
   },
   hint: {
     marginTop: Spacing.five,
     textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0,0,0,0.35)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    fontSize: 20,
+    fontFamily: DisplayFont,
+    color: Palette.textOnMetal,
   },
 });
