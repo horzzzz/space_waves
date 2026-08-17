@@ -1,21 +1,22 @@
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, Text, View } from 'react-native';
+import { Image, type ImageSource } from 'expo-image';
+import { Pressable, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { Gradients, Palette, Radius, Spacing } from '@/constants/theme';
+import { Palette } from '@/constants/theme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
+const TILE_ASPECT = 273 / 351;
+
 type Props = {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
+  icon: ImageSource;
   label: string;
   onPress: () => void;
   /** Shows the red attention dot used when a reward is waiting to be claimed. */
   badge?: boolean;
 };
 
-/** Square shortcut tile from the menu's quick-access row. */
+/** Square shortcut tile from the menu's quick-access row. The Figma export bakes the frame, icon and label into one card. */
 export function IconTile({ icon, label, onPress, badge = false }: Props) {
   const pressed = useSharedValue(0);
 
@@ -30,29 +31,8 @@ export function IconTile({ icon, label, onPress, badge = false }: Props) {
       onPress={onPress}
       onPressIn={() => (pressed.value = withTiming(1, { duration: 80 }))}
       onPressOut={() => (pressed.value = withTiming(0, { duration: 120 }))}
-      style={[animatedStyle, { flex: 1 }]}>
-      <View style={{ borderRadius: Radius.medium, borderWidth: 2, borderColor: Palette.metalEdge, overflow: 'hidden' }}>
-        <LinearGradient colors={Gradients.metal} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={{ padding: 3 }}>
-          <LinearGradient
-            colors={Gradients.ink}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={{
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: Spacing.one,
-              paddingVertical: Spacing.three,
-              borderRadius: Radius.small,
-              borderWidth: 1,
-              borderColor: Palette.inkEdge,
-            }}>
-            <Ionicons name={icon} size={24} color={Palette.gold} />
-            <Text numberOfLines={1} style={{ color: Palette.textPrimary, fontSize: 9, fontWeight: '800', letterSpacing: 0.4 }}>
-              {label.toUpperCase()}
-            </Text>
-          </LinearGradient>
-        </LinearGradient>
-      </View>
+      style={[animatedStyle, { flex: 1, aspectRatio: TILE_ASPECT }]}>
+      <Image source={icon} style={{ width: '100%', height: '100%' }} contentFit="contain" />
 
       {badge && (
         <View
@@ -60,9 +40,9 @@ export function IconTile({ icon, label, onPress, badge = false }: Props) {
             position: 'absolute',
             top: -4,
             right: -4,
-            width: 14,
-            height: 14,
-            borderRadius: 7,
+            width: 16,
+            height: 16,
+            borderRadius: 8,
             backgroundColor: Palette.danger,
             borderWidth: 2,
             borderColor: '#FFFFFF',

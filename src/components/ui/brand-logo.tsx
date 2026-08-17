@@ -1,12 +1,17 @@
 import { Image } from 'expo-image';
-import { View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
+
+import { MaxContentWidth } from '@/constants/theme';
 
 const LOGO_ASPECT = 1536 / 1024;
-const BASE_WIDTH = 280;
+/** Logo width as a fraction of the available content width, at scale 1. */
+const BASE_FRACTION = 0.72;
 
-/** The real Figma logo lockup, exported to a transparent PNG. */
+/** The real Figma logo lockup, exported to a transparent PNG. Sized relative to the screen so it scales down on small devices instead of overflowing. */
 export function BrandLogo({ scale = 1 }: { scale?: number }) {
-  const width = BASE_WIDTH * scale;
+  const { width: windowWidth } = useWindowDimensions();
+  const contentWidth = Math.min(windowWidth, MaxContentWidth);
+  const width = contentWidth * BASE_FRACTION * scale;
   return (
     <View style={{ width, height: width / LOGO_ASPECT }}>
       <Image

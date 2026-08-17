@@ -91,7 +91,7 @@ export const Type = {
   },
   button: {
     fontFamily: DisplayFont,
-    fontSize: 18,
+    fontSize: 26,
     letterSpacing: 0.6,
     color: Palette.textPrimary,
   },

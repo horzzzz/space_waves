@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { openBrowserAsync } from 'expo-web-browser';
@@ -68,22 +69,54 @@ export default function MenuScreen() {
           />
           <View style={styles.spacer} />
           <CoinBadge amount={save.coins} />
+          <IconButton
+            icon={require('@/assets/game/icons/plus.png')}
+            accessibilityLabel="Add coins"
+            onPress={() => {}}
+            size={24}
+            style={styles.plusButton}
+          />
         </View>
 
         <View style={styles.logoSlot}>
-          <BrandLogo />
+          <BrandLogo scale={1.15} />
         </View>
 
         <View style={styles.actions}>
           <GameButton label="Play" onPress={() => router.push('/mode')} />
-          <GameButton label="How to Fly" onPress={() => setShowHowTo(true)} />
+          <GameButton label="How to Fly" onPress={() => setShowHowTo(true)} badge={1} />
 
           <View style={styles.tileRow}>
-            <IconTile icon="cart" label="Shop" onPress={() => router.push('/shop')} />
-            <IconTile icon="disc" label="Wheel" onPress={() => router.push('/wheel')} badge={wheelReady} />
-            <IconTile icon="trophy" label="Ranks" onPress={() => router.push('/leaderboard')} />
-            <IconTile icon="gift" label="Bonus" onPress={() => setShowDaily(true)} badge={dailyReady} />
+            <IconTile
+              icon={require('@/assets/game/ui/tile-wheel.png')}
+              label="Wheel of Fortune"
+              onPress={() => router.push('/wheel')}
+              badge={wheelReady}
+            />
+            <IconTile
+              icon={require('@/assets/game/ui/tile-daily-drop.png')}
+              label="Daily Drop"
+              onPress={() => setShowDaily(true)}
+              badge={dailyReady}
+            />
+            {/* Daily Missions isn't implemented yet — tile is display-only for now. */}
+            <IconTile
+              icon={require('@/assets/game/ui/tile-daily-missions.png')}
+              label="Daily Missions"
+              onPress={() => {}}
+            />
+            <IconTile
+              icon={require('@/assets/game/ui/tile-leaderboard.png')}
+              label="Leaderboard"
+              onPress={() => router.push('/leaderboard')}
+            />
           </View>
+
+          <GameButton
+            label="Customize"
+            icon={<Ionicons name="construct" size={22} color={Palette.textPrimary} />}
+            onPress={() => router.push('/shop')}
+          />
         </View>
 
         <Text style={styles.legal}>
@@ -154,6 +187,9 @@ const styles = StyleSheet.create({
   spacer: {
     flex: 1,
   },
+  plusButton: {
+    marginLeft: Spacing.two,
+  },
   logoSlot: {
     flex: 1,
     alignItems: 'center',
@@ -169,14 +205,14 @@ const styles = StyleSheet.create({
   legal: {
     marginTop: Spacing.four,
     textAlign: 'center',
-    fontSize: 10,
-    lineHeight: 14,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.85)',
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '700',
+    color: Palette.textOnMetal,
   },
   legalLink: {
     textDecorationLine: 'underline',
-    color: '#FFFFFF',
+    color: Palette.textOnMetal,
   },
   dialogBody: {
     gap: Spacing.four,
