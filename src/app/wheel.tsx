@@ -11,7 +11,7 @@ import { InkPlate } from '@/components/ui/metal-panel';
 import { Pulse } from '@/components/ui/pulse';
 import { ScreenFrame } from '@/components/ui/screen-frame';
 import { Gradients, Palette, Spacing, Type } from '@/constants/theme';
-import { showRewarded } from '@/services/ads';
+import { adsEnabled, showRewarded } from '@/services/ads';
 import { playSfx, vibrate } from '@/services/audio';
 import { formatCountdown, useGameState, wheelCooldownRemaining } from '@/state/store';
 
@@ -60,6 +60,18 @@ export default function WheelScreen() {
 
   const handleClaim = async () => {
     if (claiming || prize === null) return;
+
+    // No ad ID configured yet — grant the prize directly rather than showing an
+    // ad affordance that can't actually play anything.
+    if (!adsEnabled()) {
+      addCoins(prize);
+      playSfx('reward');
+      vibrate('success');
+      setPhase('idle');
+      setPrize(null);
+      return;
+    }
+
     setClaiming(true);
     const rewarded = await showRewarded('wheel_claim');
     setClaiming(false);
@@ -113,11 +125,11 @@ export default function WheelScreen() {
         {phase === 'result' ? (
           <Pulse amount={0.05} periodMs={800}>
             <GameButton
-              label={claiming ? 'Loading...' : 'Watch & Claim'}
+              label={adsEnabled() ? (claiming ? 'Loading...' : 'Watch & Claim') : 'Claim'}
               tone="gold"
               disabled={claiming}
               onPress={handleClaim}
-              icon={<Ionicons name="videocam" size={18} color={Palette.gold} />}
+              icon={adsEnabled() ? <Ionicons name="videocam" size={18} color={Palette.gold} /> : undefined}
             />
           </Pulse>
         ) : ready ? (

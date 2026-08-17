@@ -15,6 +15,7 @@ import { useWaveEngine } from '@/game/engine';
 import { getLevel, rewardForLevel, starsForRun, TOTAL_LEVELS } from '@/game/levels';
 import { GameRenderer } from '@/game/renderer';
 import { getPlaneSkin, getSkySkin, getTrailSkin } from '@/game/skins';
+import { adsEnabled } from '@/services/ads';
 import { reportGame } from '@/services/analytics';
 import { playMusic, playSfx, stopMusic, vibrate } from '@/services/audio';
 import { useGameState } from '@/state/store';
@@ -57,14 +58,16 @@ export default function GameScreen() {
   const stars = starsForRun();
   const baseReward = rewardForLevel(levelId);
 
-  // Bank progress as soon as the level is cleared; the coin payout is settled
-  // separately once the player has decided about the boost. `completeLevel`
-  // writes to the persisted save store, an external system, so this is a genuine
-  // effect rather than something derivable during render.
+  // Bank progress as soon as the level is cleared. When ads aren't configured the
+  // boost offer is hidden entirely (see the "won" dialog below), so there's no
+  // BoostReward to settle the base payout — grant it here instead. `completeLevel`
+  // and `addCoins` write to the persisted save store, an external system, so this
+  // is a genuine effect rather than something derivable during render.
   useEffect(() => {
     if (phase !== 'won') return;
     completeLevel(levelId, stars);
-  }, [phase, levelId, stars, completeLevel]);
+    if (!adsEnabled()) addCoins(baseReward);
+  }, [phase, levelId, stars, completeLevel, addCoins, baseReward]);
 
   useEffect(() => {
     playMusic('game');
@@ -184,7 +187,7 @@ export default function GameScreen() {
             </View>
           </InkPlate>
 
-          <BoostReward baseAmount={baseReward} onSettled={settleReward} />
+          {adsEnabled() && <BoostReward baseAmount={baseReward} onSettled={settleReward} />}
 
           <GameButton
             label={levelId >= TOTAL_LEVELS ? 'Main Menu' : 'Next Level'}

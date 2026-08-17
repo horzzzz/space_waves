@@ -41,6 +41,20 @@ function appIds() {
   };
 }
 
+/**
+ * Whether a real Start.io App ID has been supplied.
+ *
+ * Ad-gated UI (rewarded-video buttons, the post-win boost offer, "free coins"
+ * card, etc.) must check this and hide itself entirely while it's `false`, so
+ * the app never shows an ad affordance it can't back with a real ad. Filling
+ * in `expo.extra.startIo` in app.json is the only step needed to light
+ * everything back up — no other code changes required.
+ */
+export function adsEnabled(): boolean {
+  const { androidAppId, iosAppId } = appIds();
+  return Boolean(androidAppId || iosAppId);
+}
+
 export function initAds() {
   if (initialized) return;
   const module = loadModule();

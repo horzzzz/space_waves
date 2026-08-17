@@ -11,7 +11,7 @@ import { Palette, Radius, Spacing, Type } from '@/constants/theme';
 import { PlanePreview } from '@/game/plane-preview';
 import { SkyPreview, TrailPreview } from '@/game/skin-previews';
 import { PLANE_SKINS, SKY_SKINS, TRAIL_SKINS, type SkinKind } from '@/game/skins';
-import { showRewarded } from '@/services/ads';
+import { adsEnabled, showRewarded } from '@/services/ads';
 import { playSfx, vibrate } from '@/services/audio';
 import { useGameState } from '@/state/store';
 
@@ -70,30 +70,32 @@ export default function ShopScreen() {
 
   return (
     <ScreenFrame title="Customize" coins={save.coins}>
-      <InkPlate style={styles.freeCoinsCard}>
-        <Image
-          source={require('@/assets/game/ui/rewarded-coins.png')}
-          style={styles.freeCoinsArt}
-          contentFit="contain"
-        />
-        <View style={styles.freeCoinsRow}>
-          <View style={styles.freeCoinsText}>
-            <Text style={[Type.body, styles.freeCoinsTitle]}>Get Free Coins!</Text>
-            <Text style={styles.freeCoinsSub}>Watch a video to get:</Text>
+      {adsEnabled() && (
+        <InkPlate style={styles.freeCoinsCard}>
+          <Image
+            source={require('@/assets/game/ui/rewarded-coins.png')}
+            style={styles.freeCoinsArt}
+            contentFit="contain"
+          />
+          <View style={styles.freeCoinsRow}>
+            <View style={styles.freeCoinsText}>
+              <Text style={[Type.body, styles.freeCoinsTitle]}>Get Free Coins!</Text>
+              <Text style={styles.freeCoinsSub}>Watch a video to get:</Text>
+            </View>
+            <View style={styles.freeCoinsAmount}>
+              <CoinIcon size={18} />
+              <Text style={styles.freeCoinsValue}>{FREE_COINS_AMOUNT}</Text>
+            </View>
           </View>
-          <View style={styles.freeCoinsAmount}>
-            <CoinIcon size={18} />
-            <Text style={styles.freeCoinsValue}>{FREE_COINS_AMOUNT}</Text>
-          </View>
-        </View>
-        <GameButton
-          label={claimingCoins ? 'Loading...' : 'Watch Ad'}
-          tone="gold"
-          disabled={claimingCoins}
-          onPress={handleFreeCoins}
-          icon={<Ionicons name="videocam" size={18} color={Palette.gold} />}
-        />
-      </InkPlate>
+          <GameButton
+            label={claimingCoins ? 'Loading...' : 'Watch Ad'}
+            tone="gold"
+            disabled={claimingCoins}
+            onPress={handleFreeCoins}
+            icon={<Ionicons name="videocam" size={18} color={Palette.gold} />}
+          />
+        </InkPlate>
+      )}
 
       <View style={styles.tabs}>
         {TABS.map((entry) => {
