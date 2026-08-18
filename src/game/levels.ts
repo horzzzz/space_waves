@@ -92,6 +92,8 @@ function difficultyFor(id: number) {
     obstacleChance: lerp(0.05, 0.32, t),
     /** Chance per candidate slot that a triangle gets carved into a wall. */
     triangleChance: id <= 3 ? 0 : lerp(0.08, 0.3, triangleT),
+    /** Chance per carved triangle that a fan spawns right on its tip. */
+    tipFanChance: 0.35,
     speed: lerp(250, 430, t),
     climbRate: lerp(0.62, 0.86, t),
     length: Math.round(lerp(5200, 12000, t)),
@@ -143,10 +145,14 @@ function carveTriangle(
   }
 }
 
+/** Where a triangle ended up — `center` is its peak, the deepest bitten sample. */
+type CarvedTriangle = { center: number; towardTop: boolean };
+
 /**
  * Scatters large/medium triangle spikes onto the flat walls. Never lets a
  * bite close the corridor past what the ship needs to squeeze through, and
- * never overlaps another triangle.
+ * never overlaps another triangle. Returns where each one landed so a fan
+ * can optionally be perched on its tip afterwards.
  */
 function buildTriangles(
   rng: () => number,
@@ -155,11 +161,12 @@ function buildTriangles(
   bottom: number[],
   topHazard: number[],
   bottomHazard: number[]
-) {
+): CarvedTriangle[] {
   const sampleCount = top.length;
   const firstSlot = Math.ceil(1400 / SEGMENT_WIDTH);
   const lastSlot = sampleCount - Math.ceil(600 / SEGMENT_WIDTH);
   const slotStride = 6;
+  const triangles: CarvedTriangle[] = [];
 
   let cursor = firstSlot;
   while (cursor < lastSlot) {
@@ -200,9 +207,12 @@ function buildTriangles(
     const bite = Math.min(gap * preset.biteRatio, maxBite);
 
     carveTriangle(top, bottom, topHazard, bottomHazard, cursor, preset.halfSamples, bite, towardTop);
+    triangles.push({ center: cursor, towardTop });
 
     cursor = s1 + slotStride;
   }
+
+  return triangles;
 }
 
 function buildLevel(id: number): Level {
@@ -222,7 +232,7 @@ function buildLevel(id: number): Level {
   const topHazard: number[] = new Array(sampleCount).fill(0);
   const bottomHazard: number[] = new Array(sampleCount).fill(0);
 
-  buildTriangles(rng, config, top, bottom, topHazard, bottomHazard);
+  const triangles = buildTriangles(rng, config, top, bottom, topHazard, bottomHazard);
 
   const obstacles: Obstacle[] = [];
 
@@ -256,7 +266,10 @@ function buildLevel(id: number): Level {
     // aspect ratio) — slightly embedded rather than exactly tangent, so
     // rounding never leaves a hairline gap.
     const towardTop = rng() < 0.5;
-    const radius = clamp(gap * lerp(0.16, 0.26, rng()), 0.025, 0.06);
+    const baseRadius = clamp(gap * lerp(0.16, 0.26, rng()), 0.025, 0.06);
+    // Cones/clusters read as visually oversized at full scale — shrink them
+    // 40%; fans stay full size.
+    const radius = kind === 'spike' ? baseRadius * 0.6 : baseRadius;
     const y = towardTop ? top[i] + radius * 1.05 : bottom[i] - radius * 1.05;
     obstacles.push({
       kind,
@@ -266,6 +279,30 @@ function buildLevel(id: number): Level {
       radius,
       spin: kind === 'fan' ? lerp(1.6, 4.2, rng()) * (rng() < 0.5 ? -1 : 1) : 0,
       towardTop,
+    });
+  }
+
+  // Fans only: a chance to perch right on a carved triangle's own tip — cones
+  // and clusters stay excluded from triangles via the hazardClearance check
+  // above.
+  for (const triangle of triangles) {
+    if (rng() >= config.tipFanChance) continue;
+
+    const gap = bottom[triangle.center] - top[triangle.center];
+    if (gap <= 0.16) continue;
+
+    const radius = clamp(gap * lerp(0.16, 0.26, rng()), 0.025, 0.06);
+    // Centered exactly on the peak, not hugging it like a wall-mounted sprite.
+    const y = triangle.towardTop ? top[triangle.center] : bottom[triangle.center];
+
+    obstacles.push({
+      kind: 'fan',
+      spikeVariant: rng() < 0.5 ? 'cluster' : 'cone',
+      x: triangle.center * SEGMENT_WIDTH,
+      y,
+      radius,
+      spin: lerp(1.6, 4.2, rng()) * (rng() < 0.5 ? -1 : 1),
+      towardTop: triangle.towardTop,
     });
   }
 
