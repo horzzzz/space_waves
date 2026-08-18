@@ -46,7 +46,7 @@ export function MetalPanel({ children, style, contentStyle }: Props) {
         },
         style,
       ]}>
-      <View>
+      <View style={styles.fill}>
         <Image
           source={require('@/assets/game/ui/metal-texture.png')}
           style={StyleSheet.absoluteFill}
@@ -91,3 +91,9 @@ export function InkPlate({
     </LinearGradient>
   );
 }
+
+const styles = StyleSheet.create({
+  fill: {
+    flex: 1,
+  },
+});

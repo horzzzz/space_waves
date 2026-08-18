@@ -1,13 +1,18 @@
 import { useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 
-import { CoinIcon, formatCoins } from '@/components/ui/coin-badge';
-import { InkPlate } from '@/components/ui/metal-panel';
+import { formatCoins } from '@/components/ui/coin-badge';
+import { MetalPanel } from '@/components/ui/metal-panel';
 import { ScreenFrame } from '@/components/ui/screen-frame';
-import { Palette, Radius, Spacing, Type } from '@/constants/theme';
+import { Palette, Radius, Spacing } from '@/constants/theme';
 import { useGameState } from '@/state/store';
 
 type Row = { rank: number; name: string; amount: number; isYou?: boolean };
+
+/** Row chrome sampled from the Figma "Leaderboards" export. */
+const ROW_BG = '#303031';
+const CAPTION_COLOR = '#8A8D93';
+const YOU_BG = '#119300';
 
 /**
  * There is no backend for this build, so the board is a deterministic mock with
@@ -34,18 +39,19 @@ function buildBoard(playerCoins: number): Row[] {
 
 function LeaderboardRow({ row }: { row: Row }) {
   return (
-    <InkPlate style={[styles.row, row.isYou && styles.rowYou]}>
-      <View style={styles.rankBadge}>
-        <Text style={styles.rankText}>{row.rank}</Text>
+    <View style={[styles.row, row.isYou && styles.rowYou]}>
+      <View style={styles.rankCol}>
+        <Text style={styles.rankNumber}>{row.rank}</Text>
+        <Text style={styles.caption}>Number</Text>
       </View>
-      <Text style={[Type.body, styles.name]} numberOfLines={1}>
+      <Text style={styles.name} numberOfLines={1}>
         {row.name}
       </Text>
-      <View style={styles.amountRow}>
-        <CoinIcon size={14} />
-        <Text style={styles.amountText}>{formatCoins(row.amount)}</Text>
+      <View style={styles.amountCol}>
+        <Text style={styles.amountText}>$ {formatCoins(row.amount)}</Text>
+        <Text style={styles.caption}>Withdrawal Amount</Text>
       </View>
-    </InkPlate>
+    </View>
   );
 }
 
@@ -54,58 +60,77 @@ export default function LeaderboardScreen() {
   const rows = useMemo(() => buildBoard(save.coins), [save.coins]);
 
   return (
-    <ScreenFrame title="Leaderboards" coins={save.coins}>
-      <FlatList
-        data={rows}
-        keyExtractor={(row) => row.name}
-        renderItem={({ item }) => <LeaderboardRow row={item} />}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-      />
+    <ScreenFrame title="Leaderboards" contentStyle={styles.content}>
+      <MetalPanel style={styles.panel} contentStyle={styles.panelContent}>
+        <FlatList
+          style={styles.list}
+          data={rows}
+          keyExtractor={(row) => row.name}
+          renderItem={({ item }) => <LeaderboardRow row={item} />}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      </MetalPanel>
     </ScreenFrame>
   );
 }
 
 const styles = StyleSheet.create({
+  content: {
+    paddingBottom: Spacing.four,
+  },
+  panel: {
+    flex: 1,
+  },
+  panelContent: {
+    flex: 1,
+    padding: Spacing.three,
+  },
   list: {
-    gap: Spacing.two,
-    paddingTop: Spacing.three,
-    paddingBottom: Spacing.six,
+    flex: 1,
+  },
+  listContent: {
+    gap: Spacing.three,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    paddingVertical: Spacing.two,
+    borderRadius: Radius.large,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
+    backgroundColor: ROW_BG,
   },
   rowYou: {
-    borderColor: Palette.lime,
+    backgroundColor: YOU_BG,
   },
-  rankBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: Radius.small,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+  rankCol: {
     alignItems: 'center',
-    justifyContent: 'center',
+    minWidth: 30,
   },
-  rankText: {
+  rankNumber: {
     color: Palette.textPrimary,
-    fontWeight: '800',
-    fontSize: 12,
+    fontWeight: '900',
+    fontSize: 22,
+  },
+  caption: {
+    color: CAPTION_COLOR,
+    fontSize: 9,
+    fontWeight: '600',
+    marginTop: 1,
   },
   name: {
     flex: 1,
     color: Palette.textPrimary,
+    fontWeight: '800',
+    fontSize: 16,
   },
-  amountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
+  amountCol: {
+    alignItems: 'flex-end',
   },
   amountText: {
-    color: Palette.gold,
-    fontWeight: '800',
-    fontSize: 13,
+    color: Palette.textPrimary,
+    fontWeight: '900',
+    fontSize: 16,
   },
 });
