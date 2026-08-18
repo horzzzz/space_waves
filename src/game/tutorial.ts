@@ -152,6 +152,7 @@ function buildTutorialLevel(): Level {
     topHazard,
     bottomHazard,
     obstacles,
+    coins: [],
     length: TUTORIAL_LENGTH,
     speed: TUTORIAL_SPEED,
     climbRate: TUTORIAL_CLIMB_RATE,

@@ -24,7 +24,7 @@
 import { useCallback, useMemo } from 'react';
 import { runOnJS, useFrameCallback, useSharedValue, type SharedValue } from 'react-native-reanimated';
 
-import { SEGMENT_WIDTH, type Level } from '@/game/levels';
+import { COIN_RADIUS, SEGMENT_WIDTH, type Level } from '@/game/levels';
 
 export const STATUS_READY = 0;
 export const STATUS_RUNNING = 1;
@@ -53,6 +53,8 @@ type Callbacks = {
   onWin: () => void;
   /** Fires when the ship reaches a `Level.checkpoints` entry; the run pauses there until resumed. */
   onCheckpoint?: (index: number) => void;
+  /** Fires once per coin picked up, so JS can play a sfx and drive a live HUD count. */
+  onCoin?: () => void;
 };
 
 export type WaveEngine = {
@@ -74,6 +76,10 @@ export type WaveEngine = {
   status: SharedValue<number>;
   /** Seconds since the run began. */
   elapsed: SharedValue<number>;
+  /** How many of the level's coins have been picked up this run. */
+  coinsCollected: SharedValue<number>;
+  /** Index of the first coin not yet resolved (collected or passed) — renderer uses this to hide resolved coins. */
+  coinCursor: SharedValue<number>;
   start: () => void;
   reset: () => void;
   pause: () => void;
@@ -99,9 +105,11 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
   const holding = useSharedValue(0);
   const status = useSharedValue<number>(STATUS_READY);
   const elapsed = useSharedValue(0);
+  const coinsCollected = useSharedValue(0);
 
   const obstacleCursor = useSharedValue(0);
   const checkpointCursor = useSharedValue(0);
+  const coinCursor = useSharedValue(0);
 
   // Flatten the level into plain number arrays so the worklet closure stays cheap
   // to serialize onto the UI runtime.
@@ -114,6 +122,8 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
       obstacleX: level.obstacles.map((o) => o.x),
       obstacleY: level.obstacles.map((o) => o.y),
       obstacleR: level.obstacles.map((o) => o.radius),
+      coinX: level.coins.map((c) => c.x),
+      coinY: level.coins.map((c) => c.y),
       checkpoints: level.checkpoints ?? [],
       length: level.length,
       speed: level.speed,
@@ -122,7 +132,7 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     [level]
   );
 
-  const { onCrash, onWin, onCheckpoint } = callbacks;
+  const { onCrash, onWin, onCheckpoint, onCoin } = callbacks;
 
   useFrameCallback((frame) => {
     'worklet';
@@ -224,6 +234,31 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
         return;
       }
     }
+
+    // --- Coins ----------------------------------------------------------
+    // Mirrors the obstacle cursor above but is non-lethal and additive: a
+    // coin is "resolved" (collected or missed) the moment the ship reaches
+    // its x, and the cursor only ever advances.
+    const coinCount = geometry.coinX.length;
+    let coinIdx = coinCursor.value;
+    while (coinIdx < coinCount) {
+      const coinXPx = geometry.coinX[coinIdx];
+      if (coinXPx > nextX + 60) break;
+      const dxPx = coinXPx - nextX;
+      const dx = dxPx / playHeight;
+      const dy = geometry.coinY[coinIdx] - nextY;
+      const reach = COIN_RADIUS + SHIP_RADIUS;
+      if (dx * dx + dy * dy < reach * reach) {
+        coinsCollected.value += 1;
+        if (onCoin) runOnJS(onCoin)();
+        coinIdx += 1;
+      } else if (coinXPx < nextX - 60) {
+        coinIdx += 1;
+      } else {
+        break;
+      }
+    }
+    coinCursor.value = coinIdx;
   }, true);
 
   const reset = useCallback(() => {
@@ -237,8 +272,24 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     elapsed.value = 0;
     obstacleCursor.value = 0;
     checkpointCursor.value = 0;
+    coinCursor.value = 0;
+    coinsCollected.value = 0;
     status.value = STATUS_READY;
-  }, [level, shipX, shipY, shipVY, trailX, trailY, holding, elapsed, obstacleCursor, checkpointCursor, status]);
+  }, [
+    level,
+    shipX,
+    shipY,
+    shipVY,
+    trailX,
+    trailY,
+    holding,
+    elapsed,
+    obstacleCursor,
+    checkpointCursor,
+    coinCursor,
+    coinsCollected,
+    status,
+  ]);
 
   const start = useCallback(() => {
     if (status.value === STATUS_READY) status.value = STATUS_RUNNING;
@@ -273,9 +324,14 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
         cursor += 1;
       }
       checkpointCursor.value = cursor;
+      let coinCursorAt = 0;
+      while (coinCursorAt < geometry.coinX.length && geometry.coinX[coinCursorAt] <= x) {
+        coinCursorAt += 1;
+      }
+      coinCursor.value = coinCursorAt;
       status.value = STATUS_PAUSED;
     },
-    [shipX, shipY, shipVY, trailX, trailY, holding, obstacleCursor, checkpointCursor, status, geometry]
+    [shipX, shipY, shipVY, trailX, trailY, holding, obstacleCursor, checkpointCursor, coinCursor, status, geometry]
   );
 
   return {
@@ -287,6 +343,8 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     holding,
     status,
     elapsed,
+    coinsCollected,
+    coinCursor,
     start,
     reset,
     pause,

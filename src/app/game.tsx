@@ -6,14 +6,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Easing, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { BoostReward } from '@/components/game/boost-reward';
-import { CoinBadge } from '@/components/ui/coin-badge';
+import { CoinBadge, CoinIcon } from '@/components/ui/coin-badge';
 import { GameButton } from '@/components/ui/game-button';
 import { GameDialog } from '@/components/ui/game-dialog';
 import { IconButton } from '@/components/ui/icon-button';
 import { InkPlate } from '@/components/ui/metal-panel';
-import { Palette, Spacing, Type } from '@/constants/theme';
+import { Palette, Radius, Spacing, Type } from '@/constants/theme';
 import { FINISH_OUTRO_MS, useWaveEngine } from '@/game/engine';
-import { getLevel, rewardForLevel, starsForRun, TOTAL_LEVELS } from '@/game/levels';
+import { getLevel, rewardForLevel, starsForRun, TOTAL_COINS_PER_LEVEL, TOTAL_LEVELS } from '@/game/levels';
 import { GameRenderer } from '@/game/renderer';
 import { getPlaneSkin, getSkySkin, getTrailSkin } from '@/game/skins';
 import { adsEnabled } from '@/services/ads';
@@ -35,6 +35,8 @@ export default function GameScreen() {
   const [phase, setPhase] = useState<Phase>('ready');
   /** 0→1 over the finish flourish; drives the ship's spin/shrink/fade into the portal. */
   const outroT = useSharedValue(0);
+  /** Live HUD count, mirrored from the engine's shared value on each pickup. */
+  const [coinsCollected, setCoinsCollected] = useState(0);
 
   const plane = getPlaneSkin(save.selectedSkins.plane);
   const trail = getTrailSkin(save.selectedSkins.trail);
@@ -59,18 +61,28 @@ export default function GameScreen() {
     setTimeout(() => setPhase('won'), FINISH_OUTRO_MS);
   }, [outroT]);
 
-  const callbacks = useMemo(() => ({ onCrash: handleCrash, onWin: handleWin }), [handleCrash, handleWin]);
+  const handleCoin = useCallback(() => {
+    setCoinsCollected((count) => count + 1);
+    playSfx('tap');
+    vibrate('light');
+  }, []);
+
+  const callbacks = useMemo(
+    () => ({ onCrash: handleCrash, onWin: handleWin, onCoin: handleCoin }),
+    [handleCrash, handleWin, handleCoin]
+  );
 
   const engine = useWaveEngine(level, height, callbacks);
 
-  const stars = starsForRun();
   const baseReward = rewardForLevel(levelId);
 
   // Bank progress as soon as the level is cleared. When ads aren't configured the
   // boost offer is hidden entirely (see the "won" dialog below), so there's no
   // BoostReward to settle the base payout — grant it here instead. `completeLevel`
   // and `addCoins` write to the persisted save store, an external system, so this
-  // is a genuine effect rather than something derivable during render.
+  // is a genuine effect rather than something derivable during render. Reading the
+  // engine's coin count here (after the run has fully stopped) is the final tally.
+  const stars = starsForRun(engine.coinsCollected.value);
   useEffect(() => {
     if (phase !== 'won') return;
     completeLevel(levelId, stars);
@@ -86,6 +98,7 @@ export default function GameScreen() {
     engine.reset();
     // eslint-disable-next-line react-hooks/immutability -- Reanimated shared-value mutation, not React state (see engine.ts header)
     outroT.value = 0;
+    setCoinsCollected(0);
     setPhase('ready');
   }, [engine, outroT]);
 
@@ -164,6 +177,15 @@ export default function GameScreen() {
             accessibilityLabel="Pause"
             onPress={handlePause}
           />
+          <View style={styles.spacer} />
+          {(phase === 'ready' || phase === 'playing' || phase === 'paused') && (
+            <View style={styles.coinCounter}>
+              <CoinIcon size={16} />
+              <Text style={styles.coinCounterText}>
+                {coinsCollected}/{TOTAL_COINS_PER_LEVEL}
+              </Text>
+            </View>
+          )}
         </View>
       </SafeAreaView>
 
@@ -235,6 +257,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.two,
+  },
+  spacer: {
+    flex: 1,
+  },
+  coinCounter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    height: 36,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    borderWidth: 2,
+    borderColor: Palette.lime,
+    backgroundColor: 'rgba(10,14,24,0.55)',
+  },
+  coinCounterText: {
+    color: Palette.textPrimary,
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
   tapHint: {
     position: 'absolute',

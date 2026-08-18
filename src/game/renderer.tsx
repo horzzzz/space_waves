@@ -10,12 +10,15 @@
 
 import {
   Canvas,
+  Circle,
   Group,
   Image as SkiaImage,
   ImageShader,
+  LinearGradient,
   Path,
   Skia,
   useImage,
+  vec,
   Vertices,
   type DataSourceParam,
   type SkImage,
@@ -24,7 +27,7 @@ import {
 import { useDerivedValue, type SharedValue } from 'react-native-reanimated';
 
 import { SHIP_RADIUS, SHIP_SCREEN_X, type WaveEngine } from '@/game/engine';
-import { SEGMENT_WIDTH, type Level, type Obstacle } from '@/game/levels';
+import { COIN_RADIUS, SEGMENT_WIDTH, type Coin, type Level, type Obstacle } from '@/game/levels';
 import type { PlaneSkin, SkySkin, TrailSkin } from '@/game/skins';
 
 type Props = {
@@ -55,7 +58,7 @@ const CLOUD_PARALLAX = 0.35;
 const WALL_TILE_SIZE = 220;
 
 export function GameRenderer({ engine, level, width, height, plane, trail, sky, outroT }: Props) {
-  const { shipX, shipY, shipVY, trailX, trailY, elapsed } = engine;
+  const { shipX, shipY, shipVY, trailX, trailY, elapsed, coinCursor } = engine;
 
   const shipRadiusPx = SHIP_RADIUS * height;
   const shipScreenX = width * SHIP_SCREEN_X;
@@ -202,6 +205,10 @@ export function GameRenderer({ engine, level, width, height, plane, trail, sky, 
           spikeClusterImage={spikeClusterImage}
           spikeConeImage={spikeConeImage}
         />
+      ))}
+
+      {level.coins.map((coin, index) => (
+        <CoinSprite key={index} coin={coin} index={index} cameraX={cameraX} coinCursor={coinCursor} height={height} />
       ))}
 
       {/* Trail, drawn before the ship so the ship sits on top of it */}
@@ -367,6 +374,46 @@ function ObstacleSprite({
   return (
     <Group transform={transform}>
       <SkiaImage image={image} x={-drawnW / 2} y={-drawnH / 2} width={drawnW} height={drawnH} fit="contain" />
+    </Group>
+  );
+}
+
+type CoinSpriteProps = {
+  coin: Coin;
+  /** This coin's position in `level.coins` — compared against the engine's
+   *  coin cursor to know whether it's already resolved (collected or passed). */
+  index: number;
+  cameraX: SharedValue<number>;
+  coinCursor: SharedValue<number>;
+  height: number;
+};
+
+/**
+ * Placeholder coin visual (gold gradient disc, same language as the wallet's
+ * `CoinIcon`) until real Figma art replaces it. Hidden once the engine's
+ * cursor has moved past this coin's index, since resolution is strictly
+ * forward-moving just like the obstacle cursor.
+ */
+function CoinSprite({ coin, index, cameraX, coinCursor, height }: CoinSpriteProps) {
+  const radiusPx = COIN_RADIUS * height;
+
+  const transform = useDerivedValue(() => [
+    { translateX: coin.x - cameraX.value },
+    { translateY: coin.y * height },
+  ]);
+
+  const opacity = useDerivedValue(() => (index < coinCursor.value ? 0 : 1));
+
+  return (
+    <Group transform={transform} opacity={opacity}>
+      <Circle cx={0} cy={0} r={radiusPx}>
+        <LinearGradient
+          start={vec(-radiusPx, -radiusPx)}
+          end={vec(radiusPx, radiusPx)}
+          colors={['#FFE9A8', '#F2B93B', '#C4790E']}
+        />
+      </Circle>
+      <Circle cx={0} cy={0} r={radiusPx} style="stroke" strokeWidth={radiusPx * 0.18} color="rgba(255,255,255,0.55)" />
     </Group>
   );
 }

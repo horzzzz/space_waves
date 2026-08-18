@@ -18,6 +18,12 @@
 
 export const TOTAL_LEVELS = 40;
 
+/** Collectible coins scattered along every level's course. */
+export const TOTAL_COINS_PER_LEVEL = 9;
+
+/** Coin sprite collision radius, normalized to playfield height. */
+export const COIN_RADIUS = 0.022;
+
 /** Horizontal distance between corridor samples, in world pixels. */
 export const SEGMENT_WIDTH = 36;
 
@@ -27,6 +33,11 @@ const SHIP_RADIUS = 0.026;
 export type ObstacleKind = 'spike' | 'fan';
 /** Which spike artwork to draw; ignored for fans. */
 export type SpikeVariant = 'cluster' | 'cone';
+
+export type Coin = {
+  x: number;
+  y: number;
+};
 
 export type Obstacle = {
   kind: ObstacleKind;
@@ -50,6 +61,7 @@ export type Level = {
   topHazard: number[];
   bottomHazard: number[];
   obstacles: Obstacle[];
+  coins: Coin[];
   /** Total course length in world pixels. */
   length: number;
   /** Forward speed in pixels per second. */
@@ -312,6 +324,40 @@ function buildLevel(id: number): Level {
   // them, which is why flying through a tip fan could pass clean through.
   obstacles.sort((a, b) => a.x - b.x);
 
+  // --- Coins ----------------------------------------------------------
+  // One coin per ~ninth of the playable span, jittered by the level's own
+  // rng so they don't read as laid out on a grid, and nudged off hazards/
+  // obstacles so every coin stays reachable while riding either wall.
+  const coins: Coin[] = [];
+  const coinSpan = lastSlot - firstSlot;
+  const coinSegment = coinSpan / TOTAL_COINS_PER_LEVEL;
+  const coinClearance = 6;
+
+  const coinSlotBlocked = (sample: number) => {
+    for (let k = -coinClearance; k <= coinClearance; k += 1) {
+      const s = sample + k;
+      if (s < 0 || s >= sampleCount) continue;
+      if (topHazard[s] === 1 || bottomHazard[s] === 1) return true;
+    }
+    const worldX = sample * SEGMENT_WIDTH;
+    return obstacles.some((o) => Math.abs(o.x - worldX) < 90);
+  };
+
+  for (let slot = 0; slot < TOTAL_COINS_PER_LEVEL; slot += 1) {
+    const segStart = firstSlot + slot * coinSegment;
+    const segEnd = Math.min(lastSlot - 1, Math.round(segStart + coinSegment));
+    let i = clamp(Math.round(segStart + lerp(0.25, 0.75, rng()) * coinSegment), firstSlot, lastSlot - 1);
+
+    let guard = 0;
+    while (coinSlotBlocked(i) && i < segEnd && guard < coinSegment) {
+      i += 1;
+      guard += 1;
+    }
+
+    const gap = bottom[i] - top[i];
+    coins.push({ x: i * SEGMENT_WIDTH, y: top[i] + gap / 2 });
+  }
+
   return {
     id,
     top,
@@ -319,6 +365,7 @@ function buildLevel(id: number): Level {
     topHazard,
     bottomHazard,
     obstacles,
+    coins,
     length: config.length,
     speed: config.speed,
     climbRate: config.climbRate,
@@ -338,9 +385,12 @@ export function getLevel(id: number): Level {
   return level;
 }
 
-/** Every finished run earns a full 3 stars. */
-export function starsForRun() {
-  return 3;
+/** Star rating for a finished run, from how many of the level's coins were collected. */
+export function starsForRun(coinsCollected: number) {
+  if (coinsCollected >= 7) return 3;
+  if (coinsCollected >= 4) return 2;
+  if (coinsCollected >= 1) return 1;
+  return 0;
 }
 
 /** Coin payout for clearing a level, shown on the Level Complete dialog. */
