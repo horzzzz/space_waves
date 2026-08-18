@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Easing, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { BoostReward } from '@/components/game/boost-reward';
 import { CoinBadge } from '@/components/ui/coin-badge';
@@ -20,7 +21,10 @@ import { reportGame } from '@/services/analytics';
 import { playMusic, playSfx, stopMusic, vibrate } from '@/services/audio';
 import { useGameState } from '@/state/store';
 
-type Phase = 'ready' | 'playing' | 'paused' | 'won' | 'crashed';
+type Phase = 'ready' | 'playing' | 'paused' | 'finishing' | 'won' | 'crashed';
+
+/** How long the spin-into-the-portal flourish plays before the win dialog appears. */
+const FINISH_OUTRO_MS = 850;
 
 export default function GameScreen() {
   const router = useRouter();
@@ -32,6 +36,8 @@ export default function GameScreen() {
   const level = useMemo(() => getLevel(levelId), [levelId]);
 
   const [phase, setPhase] = useState<Phase>('ready');
+  /** 0→1 over the finish flourish; drives the ship's spin/shrink/fade into the portal. */
+  const outroT = useSharedValue(0);
 
   const plane = getPlaneSkin(save.selectedSkins.plane);
   const trail = getTrailSkin(save.selectedSkins.trail);
@@ -45,11 +51,16 @@ export default function GameScreen() {
   }, []);
 
   const handleWin = useCallback(() => {
-    setPhase('won');
+    // Play the spin-into-the-portal flourish before the dialog interrupts it.
+    setPhase('finishing');
     reportGame('win');
     playSfx('win');
     vibrate('success');
-  }, []);
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared-value mutation, not React state (see engine.ts header)
+    outroT.value = 0;
+    outroT.value = withTiming(1, { duration: FINISH_OUTRO_MS, easing: Easing.in(Easing.cubic) });
+    setTimeout(() => setPhase('won'), FINISH_OUTRO_MS);
+  }, [outroT]);
 
   const callbacks = useMemo(() => ({ onCrash: handleCrash, onWin: handleWin }), [handleCrash, handleWin]);
 
@@ -76,8 +87,10 @@ export default function GameScreen() {
 
   const restart = useCallback(() => {
     engine.reset();
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared-value mutation, not React state (see engine.ts header)
+    outroT.value = 0;
     setPhase('ready');
-  }, [engine]);
+  }, [engine, outroT]);
 
   // Restart cleanly whenever the level changes (e.g. Next Level).
   useEffect(() => {
@@ -123,7 +136,7 @@ export default function GameScreen() {
 
   const settleReward = (amount: number) => addCoins(amount);
 
-  const isOverlayOpen = phase === 'paused' || phase === 'won' || phase === 'crashed';
+  const isOverlayOpen = phase === 'paused' || phase === 'finishing' || phase === 'won' || phase === 'crashed';
 
   return (
     <View style={styles.container}>
@@ -135,6 +148,7 @@ export default function GameScreen() {
         plane={plane}
         trail={trail}
         sky={sky}
+        outroT={outroT}
       />
 
       {/* Control surface: hold to climb, release to dive. */}

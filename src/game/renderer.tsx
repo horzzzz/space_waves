@@ -35,6 +35,8 @@ type Props = {
   plane: PlaneSkin;
   trail: TrailSkin;
   sky: SkySkin;
+  /** 0→1 over the finish flourish; spins/shrinks/fades the ship into the portal. */
+  outroT: SharedValue<number>;
 };
 
 /** Parallax clouds are laid out once per level from a fixed pattern. */
@@ -52,7 +54,7 @@ const CLOUD_PARALLAX = 0.35;
 /** Size of one stone tile, in px — roughly ~6x SEGMENT_WIDTH. */
 const WALL_TILE_SIZE = 220;
 
-export function GameRenderer({ engine, level, width, height, plane, trail, sky }: Props) {
+export function GameRenderer({ engine, level, width, height, plane, trail, sky, outroT }: Props) {
   const { shipX, shipY, shipVY, trailX, trailY, elapsed } = engine;
 
   const shipRadiusPx = SHIP_RADIUS * height;
@@ -153,25 +155,22 @@ export function GameRenderer({ engine, level, width, height, plane, trail, sky }
     // so it flies level while riding the ground instead of nosing down.
     const rise = shipVY.value * height;
     const angle = Math.atan2(rise, level.speed);
-    return [{ translateX: shipScreenX }, { translateY: shipY.value * height }, { rotate: angle }];
+    const t = outroT.value;
+    // Geometry-Dash-style outro: spin up, shrink, and keep flying forward off
+    // the edge of the screen instead of just stopping dead on the finish line.
+    const spin = t * Math.PI * 2.5;
+    const scale = Math.max(0.1, 1 - t * 0.9);
+    const forward = t * width * 0.55;
+    return [
+      { translateX: shipScreenX + forward },
+      { translateY: shipY.value * height },
+      { rotate: angle + spin },
+      { scale },
+    ];
   });
 
-  // --- Finish gate ----------------------------------------------------------
-  const finishPath = useDerivedValue(() => {
-    const path = Skia.Path.Make();
-    const screenX = level.length - cameraX.value;
-    if (screenX > width + 60 || screenX < -60) return path;
-
-    const band = 14;
-    const rows = 16;
-    const rowHeight = height / rows;
-    for (let row = 0; row < rows; row += 1) {
-      if (row % 2 === 0) continue;
-      path.addRect(Skia.XYWHRect(screenX - band, row * rowHeight, band, rowHeight));
-      path.addRect(Skia.XYWHRect(screenX, (row - 1) * rowHeight, band, rowHeight));
-    }
-    return path;
-  });
+  /** Ship fades out over the back half of the outro so it doesn't hard-cut. */
+  const shipOpacity = useDerivedValue(() => 1 - Math.max(0, outroT.value - 0.55) / 0.45);
 
   const skyImage = useImage(sky.image as DataSourceParam);
 
@@ -181,9 +180,6 @@ export function GameRenderer({ engine, level, width, height, plane, trail, sky }
       {skyImage && <SkiaImage image={skyImage} x={0} y={0} width={width} height={height} fit="cover" />}
 
       <Path path={cloudsPath} color="rgba(255,255,255,0.55)" />
-
-      {/* Finish gate sits behind the walls so it reads as part of the course. */}
-      <Path path={finishPath} color="rgba(255,255,255,0.9)" />
 
       {/* Corridor */}
       {stoneImage && (
@@ -213,7 +209,7 @@ export function GameRenderer({ engine, level, width, height, plane, trail, sky }
         <TrailRibbon trailX={trailX} trailY={trailY} cameraX={cameraX} height={height} radiusPx={trailRadiusPx} image={trailImage} />
       )}
 
-      <Group transform={shipTransform}>
+      <Group transform={shipTransform} opacity={shipOpacity}>
         {shipImage && (
           <SkiaImage
             image={shipImage}
