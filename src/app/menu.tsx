@@ -13,6 +13,7 @@ import { GameDialog } from '@/components/ui/game-dialog';
 import { IconButton } from '@/components/ui/icon-button';
 import { IconTile } from '@/components/ui/icon-tile';
 import { InkPlate } from '@/components/ui/metal-panel';
+import { QuestsContent } from '@/components/ui/quests-content';
 import { SettingsContent } from '@/components/ui/settings-content';
 import { ShopContent } from '@/components/ui/shop-content';
 import { SkyBackground } from '@/components/ui/sky-background';
@@ -22,6 +23,7 @@ import { playMusic, playSfx, vibrate } from '@/services/audio';
 import {
   DAILY_BONUS_AMOUNT,
   dailyBonusRemaining,
+  hasClaimableQuest,
   useGameState,
   wheelCooldownRemaining,
 } from '@/state/store';
@@ -32,9 +34,11 @@ export default function MenuScreen() {
   const [showDaily, setShowDaily] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showCustomize, setShowCustomize] = useState(false);
+  const [showQuests, setShowQuests] = useState(false);
 
   const dailyReady = dailyBonusRemaining(save.lastDailyBonusAt) === 0;
   const wheelReady = wheelCooldownRemaining(save.lastWheelSpinAt) === 0;
+  const questsReady = hasClaimableQuest(save);
 
   useEffect(() => {
     playMusic('menu');
@@ -95,11 +99,11 @@ export default function MenuScreen() {
               onPress={() => setShowDaily(true)}
               badge={dailyReady}
             />
-            {/* Daily Missions isn't implemented yet — tile is display-only for now. */}
             <IconTile
               icon={require('@/assets/game/ui/tile-daily-missions.png')}
               label="Daily Missions"
-              onPress={() => {}}
+              onPress={() => setShowQuests(true)}
+              badge={questsReady}
             />
             <IconTile
               icon={require('@/assets/game/ui/tile-leaderboard.png')}
@@ -157,6 +161,10 @@ export default function MenuScreen() {
 
       <GameDialog visible={showCustomize} title="Customization" onClose={() => setShowCustomize(false)}>
         <ShopContent />
+      </GameDialog>
+
+      <GameDialog visible={showQuests} title="Daily Quests" onClose={() => setShowQuests(false)}>
+        <QuestsContent />
       </GameDialog>
     </SkyBackground>
   );

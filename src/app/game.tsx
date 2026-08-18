@@ -27,7 +27,7 @@ export default function GameScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ level?: string }>();
   const { width, height } = useWindowDimensions();
-  const { save, completeLevel, addCoins } = useGameState();
+  const { save, completeLevel, addCoins, recordQuestRun } = useGameState();
 
   const levelId = Math.min(TOTAL_LEVELS, Math.max(1, Number(params.level) || 1));
   const level = useMemo(() => getLevel(levelId), [levelId]);
@@ -86,8 +86,9 @@ export default function GameScreen() {
   useEffect(() => {
     if (phase !== 'won') return;
     completeLevel(levelId, stars);
+    recordQuestRun(stars, engine.coinsCollected.value);
     if (!adsEnabled()) addCoins(baseReward);
-  }, [phase, levelId, stars, completeLevel, addCoins, baseReward]);
+  }, [phase, levelId, stars, completeLevel, addCoins, baseReward, recordQuestRun, engine.coinsCollected]);
 
   useEffect(() => {
     playMusic('game');
