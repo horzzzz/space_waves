@@ -14,9 +14,10 @@ import { IconButton } from '@/components/ui/icon-button';
 import { IconTile } from '@/components/ui/icon-tile';
 import { InkPlate } from '@/components/ui/metal-panel';
 import { SettingsContent } from '@/components/ui/settings-content';
+import { ShopContent } from '@/components/ui/shop-content';
 import { SkyBackground } from '@/components/ui/sky-background';
 import { getLegalUrls } from '@/constants/config';
-import { MaxContentWidth, Palette, Spacing, Type } from '@/constants/theme';
+import {DisplayFont, MaxContentWidth, Palette, Spacing, Type} from '@/constants/theme';
 import { playMusic, playSfx, vibrate } from '@/services/audio';
 import {
   DAILY_BONUS_AMOUNT,
@@ -31,6 +32,7 @@ export default function MenuScreen() {
   const [showDaily, setShowDaily] = useState(false);
   const [showHowTo, setShowHowTo] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showCustomize, setShowCustomize] = useState(false);
 
   const dailyReady = dailyBonusRemaining(save.lastDailyBonusAt) === 0;
   const wheelReady = wheelCooldownRemaining(save.lastWheelSpinAt) === 0;
@@ -117,7 +119,7 @@ export default function MenuScreen() {
           <GameButton
             label="Customize"
             icon={<Ionicons name="construct" size={22} color={Palette.textPrimary} />}
-            onPress={() => router.push('/shop')}
+            onPress={() => setShowCustomize(true)}
           />
         </View>
 
@@ -173,6 +175,10 @@ export default function MenuScreen() {
       <GameDialog visible={showSettings} title="Settings" onClose={() => setShowSettings(false)}>
         <SettingsContent />
       </GameDialog>
+
+      <GameDialog visible={showCustomize} title="Customization" onClose={() => setShowCustomize(false)}>
+        <ShopContent />
+      </GameDialog>
     </SkyBackground>
   );
 }
@@ -215,10 +221,12 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: '700',
     color: Palette.textOnMetal,
+    fontFamily: DisplayFont,
   },
   legalLink: {
     textDecorationLine: 'underline',
     color: Palette.textOnMetal,
+    fontFamily: DisplayFont,
   },
   dialogBody: {
     gap: Spacing.four,

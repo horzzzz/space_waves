@@ -6,7 +6,6 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CoinIcon } from '@/components/ui/coin-badge';
 import { GameButton } from '@/components/ui/game-button';
 import { InkPlate } from '@/components/ui/metal-panel';
-import { ScreenFrame } from '@/components/ui/screen-frame';
 import { Palette, Radius, Spacing, Type } from '@/constants/theme';
 import { PlanePreview } from '@/game/plane-preview';
 import { SkyPreview, TrailPreview } from '@/game/skin-previews';
@@ -24,12 +23,13 @@ const TABS: { key: SkinKind; label: string; icon: React.ComponentProps<typeof Io
 const FREE_COINS_AMOUNT = 1000;
 
 function Preview({ kind, id }: { kind: SkinKind; id: string }) {
-  if (kind === 'plane') return <PlanePreview skin={PLANE_SKINS.find((s) => s.id === id) ?? PLANE_SKINS[0]} size={56} />;
-  if (kind === 'trail') return <TrailPreview skin={TRAIL_SKINS.find((s) => s.id === id) ?? TRAIL_SKINS[0]} size={56} />;
-  return <SkyPreview skin={SKY_SKINS.find((s) => s.id === id) ?? SKY_SKINS[0]} size={56} />;
+  if (kind === 'plane') return <PlanePreview skin={PLANE_SKINS.find((s) => s.id === id) ?? PLANE_SKINS[0]} size={96} />;
+  if (kind === 'trail') return <TrailPreview skin={TRAIL_SKINS.find((s) => s.id === id) ?? TRAIL_SKINS[0]} />;
+  return <SkyPreview skin={SKY_SKINS.find((s) => s.id === id) ?? SKY_SKINS[0]} size={96} />;
 }
 
-export default function ShopScreen() {
+/** Customize shop body rendered inside a GameDialog, matching the Figma overlay design. */
+export function ShopContent() {
   const { save, buySkin, selectSkin, addCoins } = useGameState();
   const [tab, setTab] = useState<SkinKind>('plane');
   const [claimingCoins, setClaimingCoins] = useState(false);
@@ -69,7 +69,7 @@ export default function ShopScreen() {
   };
 
   return (
-    <ScreenFrame title="Customize" coins={save.coins}>
+    <View>
       {adsEnabled() && (
         <InkPlate style={styles.freeCoinsCard}>
           <Image
@@ -114,7 +114,7 @@ export default function ShopScreen() {
         })}
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll} contentContainerStyle={styles.grid}>
         {items.map((item) => {
           const isOwned = owned.includes(item.id);
           const isSelected = selected === item.id;
@@ -125,7 +125,7 @@ export default function ShopScreen() {
               accessibilityLabel={`${item.name}${isOwned ? '' : `, ${item.price} coins`}`}
               onPress={() => handlePick(item.id, item.price)}
               style={[styles.card, isSelected && styles.cardSelected]}>
-              <View style={styles.previewSlot}>
+              <View style={tab === 'trail' ? styles.previewSlotTrail : styles.previewSlot}>
                 <Preview kind={tab} id={item.id} />
               </View>
               <Text style={styles.cardName} numberOfLines={1}>
@@ -148,13 +148,13 @@ export default function ShopScreen() {
           );
         })}
       </ScrollView>
-    </ScreenFrame>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   freeCoinsCard: {
-    marginTop: Spacing.three,
+    marginBottom: Spacing.three,
     gap: Spacing.three,
   },
   freeCoinsArt: {
@@ -191,7 +191,6 @@ const styles = StyleSheet.create({
   tabs: {
     flexDirection: 'row',
     gap: Spacing.two,
-    marginTop: Spacing.four,
   },
   tab: {
     flex: 1,
@@ -217,16 +216,19 @@ const styles = StyleSheet.create({
   tabLabelActive: {
     color: Palette.textOnMetal,
   },
+  scroll: {
+    maxHeight: 460,
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingTop: Spacing.four,
-    paddingBottom: Spacing.six,
+    paddingBottom: Spacing.two,
     gap: Spacing.three,
   },
   card: {
-    width: '31%',
+    width: '48%',
     alignItems: 'center',
     gap: Spacing.one,
     paddingVertical: Spacing.three,
@@ -240,13 +242,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(127,198,60,0.18)',
   },
   previewSlot: {
-    width: 56,
+    width: 96,
+    height: 96,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewSlotTrail: {
+    width: '92%',
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardName: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: Palette.textPrimary,
   },
@@ -256,12 +264,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   priceText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
     color: Palette.gold,
   },
   ownedText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: Palette.textMuted,
   },
@@ -275,7 +283,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   selectedText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '800',
     color: Palette.textOnMetal,
   },
