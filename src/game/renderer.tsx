@@ -386,13 +386,23 @@ type WallStoneTileProps = {
  * One repeating stone tile. `index` is this instance's fixed slot; each frame it
  * re-derives which world tile belongs in that slot from the camera position —
  * fixed component count, continuous tiling, same wrap idea as `cloudsPath`'s `cycle`.
+ *
+ * The source art isn't a seamless tile, so butting two copies edge-to-edge shows
+ * a visible seam. Mirroring every other tile makes each boundary meet its own
+ * reflection instead of an unrelated edge, so it always lines up — same trick as
+ * mirrored/"ping-pong" texture repeat.
  */
 function WallStoneTile({ index, cameraX, height, image }: WallStoneTileProps) {
   const transform = useDerivedValue(() => {
     const camera = cameraX.value;
     const baseIndex = Math.floor(camera / WALL_TILE_SIZE) - 1;
     const worldIndex = baseIndex + index;
-    return [{ translateX: worldIndex * WALL_TILE_SIZE - camera }];
+    const left = worldIndex * WALL_TILE_SIZE - camera;
+    const flipped = ((worldIndex % 2) + 2) % 2 === 1;
+    if (flipped) {
+      return [{ translateX: left + WALL_TILE_SIZE }, { scaleX: -1 }];
+    }
+    return [{ translateX: left }];
   });
 
   return (

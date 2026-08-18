@@ -81,7 +81,7 @@ export function stopMusic() {
   currentTrack = null;
 }
 
-export function playSfx(name: SfxName) {
+export async function playSfx(name: SfxName) {
   if (!soundEnabled) return;
   const source = SOURCES[name];
   if (!source) return;
@@ -92,7 +92,10 @@ export function playSfx(name: SfxName) {
     player.volume = SFX_VOLUME;
     sfxPlayers.set(name, player);
   }
-  player.seekTo(0);
+  // Must resolve before play(): on a repeat play the player is sitting at the
+  // end of the clip from last time, and starting playback before the seek
+  // lands plays silence (or the last few ms) instead of the sound.
+  await player.seekTo(0);
   player.play();
 }
 

@@ -303,6 +303,13 @@ function buildLevel(id: number): Level {
     });
   }
 
+  // Tip fans were appended after the slot-scan obstacles regardless of world
+  // position, so the array isn't in ascending-x order anymore. The engine's
+  // per-frame collision cursor only ever moves forward and assumes ascending
+  // x — out of order entries get permanently skipped once the cursor passes
+  // them, which is why flying through a tip fan could pass clean through.
+  obstacles.sort((a, b) => a.x - b.x);
+
   return {
     id,
     top,
