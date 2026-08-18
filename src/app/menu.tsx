@@ -13,6 +13,7 @@ import { GameDialog } from '@/components/ui/game-dialog';
 import { IconButton } from '@/components/ui/icon-button';
 import { IconTile } from '@/components/ui/icon-tile';
 import { InkPlate } from '@/components/ui/metal-panel';
+import { SettingsContent } from '@/components/ui/settings-content';
 import { SkyBackground } from '@/components/ui/sky-background';
 import { getLegalUrls } from '@/constants/config';
 import { MaxContentWidth, Palette, Spacing, Type } from '@/constants/theme';
@@ -29,6 +30,7 @@ export default function MenuScreen() {
   const { save, claimDailyBonus } = useGameState();
   const [showDaily, setShowDaily] = useState(false);
   const [showHowTo, setShowHowTo] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const dailyReady = dailyBonusRemaining(save.lastDailyBonusAt) === 0;
   const wheelReady = wheelCooldownRemaining(save.lastWheelSpinAt) === 0;
@@ -65,7 +67,7 @@ export default function MenuScreen() {
           <IconButton
             icon={require('@/assets/game/icons/settings.png')}
             accessibilityLabel="Settings"
-            onPress={() => router.push('/settings')}
+            onPress={() => setShowSettings(true)}
           />
           <View style={styles.spacer} />
           <CoinBadge amount={save.coins} />
@@ -166,6 +168,10 @@ export default function MenuScreen() {
           </InkPlate>
           <GameButton label="Got It" onPress={() => setShowHowTo(false)} />
         </View>
+      </GameDialog>
+
+      <GameDialog visible={showSettings} title="Settings" onClose={() => setShowSettings(false)}>
+        <SettingsContent />
       </GameDialog>
     </SkyBackground>
   );

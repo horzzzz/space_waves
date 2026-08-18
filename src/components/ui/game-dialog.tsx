@@ -30,7 +30,9 @@ export function GameDialog({ visible, title, children, onClose, dismissable = tr
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       />
-      <Animated.View entering={ZoomIn.springify().damping(16)} style={styles.panelWrapper}>
+      <Animated.View
+        entering={ZoomIn.springify().damping(20).stiffness(180).overshootClamping(1)}
+        style={styles.panelWrapper}>
         <MetalPanel contentStyle={styles.panelContent}>
           {title && (
             <Text style={[Type.title, styles.title]} numberOfLines={2}>

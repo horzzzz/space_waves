@@ -11,7 +11,7 @@ type Props = {
 /** Label + switch row used throughout Settings. */
 export function ToggleRow({ label, value, onValueChange }: Props) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.two }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.three }}>
       <Text style={[Type.body, { color: Palette.textPrimary }]}>{label}</Text>
       <Switch
         value={value}
