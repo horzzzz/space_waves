@@ -12,11 +12,14 @@ import {
   Canvas,
   Group,
   Image as SkiaImage,
+  ImageShader,
   Path,
   Skia,
   useImage,
+  Vertices,
   type DataSourceParam,
   type SkImage,
+  type SkPoint,
 } from '@shopify/react-native-skia';
 import { useDerivedValue, type SharedValue } from 'react-native-reanimated';
 
@@ -50,7 +53,7 @@ const CLOUD_PARALLAX = 0.35;
 const WALL_TILE_SIZE = 220;
 
 export function GameRenderer({ engine, level, width, height, plane, trail, sky }: Props) {
-  const { shipX, shipY, shipVY, elapsed } = engine;
+  const { shipX, shipY, shipVY, trailX, trailY, elapsed } = engine;
 
   const shipRadiusPx = SHIP_RADIUS * height;
   const shipScreenX = width * SHIP_SCREEN_X;
@@ -142,15 +145,8 @@ export function GameRenderer({ engine, level, width, height, plane, trail, sky }
   const shipHeight = shipWidth / shipAspect;
 
   // --- Trail ------------------------------------------------------------
-  // A plain sprite riding in the ship's own Group (so it inherits the exact same
-  // position/rotation as the ship, no separate path-following math). Sized off the
-  // ship's own on-screen width so it scales consistently across devices, and
-  // cropped with `fit="cover"` rather than stretched to the source's native ~16:1
-  // aspect, since showing the whole elongated strip at a small scale reads as a
-  // faint scratchy line rather than the bold streak in the source art.
   const trailImage = useImage(trail.image as DataSourceParam);
-  const trailWidth = shipWidth * 1.9;
-  const trailHeight = shipRadiusPx * 1.1;
+  const trailRadiusPx = shipRadiusPx * 0.55;
 
   const shipTransform = useDerivedValue(() => {
     // Tilt to the ship's actual vertical speed (not the raw hold/release input)
@@ -212,18 +208,12 @@ export function GameRenderer({ engine, level, width, height, plane, trail, sky }
         />
       ))}
 
+      {/* Trail, drawn before the ship so the ship sits on top of it */}
+      {trailImage && (
+        <TrailRibbon trailX={trailX} trailY={trailY} cameraX={cameraX} height={height} radiusPx={trailRadiusPx} image={trailImage} />
+      )}
+
       <Group transform={shipTransform}>
-        {/* Trail, drawn first so the ship sits on top of it */}
-        {trailImage && (
-          <SkiaImage
-            image={trailImage}
-            x={-shipWidth / 2 - trailWidth * 0.9}
-            y={-trailHeight / 2}
-            width={trailWidth}
-            height={trailHeight}
-            fit="cover"
-          />
-        )}
         {shipImage && (
           <SkiaImage
             image={shipImage}
@@ -236,6 +226,85 @@ export function GameRenderer({ engine, level, width, height, plane, trail, sky }
         )}
       </Group>
     </Canvas>
+  );
+}
+
+type TrailRibbonProps = {
+  trailX: SharedValue<number[]>;
+  trailY: SharedValue<number[]>;
+  cameraX: SharedValue<number>;
+  height: number;
+  radiusPx: number;
+  image: SkImage;
+};
+
+/**
+ * The ship's actual path, retraced as a ribbon mesh and textured with the
+ * trail skin's own art stretched along it — the *entire* source image maps
+ * once onto whatever length of history is currently on screen (tail end at
+ * the oldest point, bright/pointed end at the ship), rather than tiling it
+ * repeatedly, so the art's own built-in fade reads correctly no matter how
+ * the path bends.
+ */
+function TrailRibbon({ trailX, trailY, cameraX, height, radiusPx, image }: TrailRibbonProps) {
+  const imageW = image.width();
+  const imageH = image.height();
+
+  const ribbon = useDerivedValue(() => {
+    'worklet';
+    const xs = trailX.value;
+    const ys = trailY.value;
+    const n = xs.length;
+    if (n < 2) return { vertices: [] as SkPoint[], textures: [] as SkPoint[] };
+
+    const sx = new Array<number>(n);
+    const sy = new Array<number>(n);
+    const cumLen = new Array<number>(n);
+    cumLen[0] = 0;
+    for (let i = 0; i < n; i += 1) {
+      sx[i] = xs[i] - cameraX.value;
+      sy[i] = ys[i] * height;
+      if (i > 0) {
+        const dx = sx[i] - sx[i - 1];
+        const dy = sy[i] - sy[i - 1];
+        cumLen[i] = cumLen[i - 1] + Math.sqrt(dx * dx + dy * dy);
+      }
+    }
+    const totalLen = cumLen[n - 1];
+    if (totalLen <= 0) return { vertices: [] as SkPoint[], textures: [] as SkPoint[] };
+
+    const vertices: SkPoint[] = new Array(n * 2);
+    const textures: SkPoint[] = new Array(n * 2);
+
+    for (let i = 0; i < n; i += 1) {
+      const prev = i > 0 ? i - 1 : i;
+      const next = i < n - 1 ? i + 1 : i;
+      let tx = sx[next] - sx[prev];
+      let ty = sy[next] - sy[prev];
+      const len = Math.sqrt(tx * tx + ty * ty) || 1;
+      tx /= len;
+      ty /= len;
+      // Perpendicular normal, rotated 90° from the tangent.
+      const nx = -ty * radiusPx;
+      const ny = tx * radiusPx;
+
+      const u = (cumLen[i] / totalLen) * imageW;
+      vertices[i * 2] = { x: sx[i] + nx, y: sy[i] + ny };
+      vertices[i * 2 + 1] = { x: sx[i] - nx, y: sy[i] - ny };
+      textures[i * 2] = { x: u, y: 0 };
+      textures[i * 2 + 1] = { x: u, y: imageH };
+    }
+
+    return { vertices, textures };
+  });
+
+  const ribbonVertices = useDerivedValue(() => ribbon.value.vertices);
+  const ribbonTextures = useDerivedValue(() => ribbon.value.textures);
+
+  return (
+    <Vertices vertices={ribbonVertices} textures={ribbonTextures} mode="triangleStrip">
+      <ImageShader image={image} fit="fill" rect={{ x: 0, y: 0, width: imageW, height: imageH }} />
+    </Vertices>
   );
 }
 

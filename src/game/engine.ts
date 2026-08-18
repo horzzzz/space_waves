@@ -37,6 +37,14 @@ export const SHIP_RADIUS = 0.026;
 /** Where the ship sits horizontally on screen, as a fraction of width. */
 export const SHIP_SCREEN_X = 0.3;
 
+/**
+ * How much of the ship's path history to keep, in world pixels behind its
+ * current x. Only ever need enough to cover what's visible behind the ship
+ * on screen (`SHIP_SCREEN_X * width`), so this comfortably covers any real
+ * device width with room to spare.
+ */
+const TRAIL_WORLD_SPAN = 500;
+
 type Callbacks = {
   onCrash: () => void;
   onWin: () => void;
@@ -51,6 +59,11 @@ export type WaveEngine = {
    *  hold/release rate while riding the ground, so the renderer can tilt the
    *  ship to the slope it's actually on rather than the input direction. */
   shipVY: SharedValue<number>;
+  /** Recent path history (world x / normalized y), oldest first, trimmed to
+   *  `TRAIL_WORLD_SPAN` behind the ship — the renderer traces the trail
+   *  ribbon through these exact points. */
+  trailX: SharedValue<number[]>;
+  trailY: SharedValue<number[]>;
   /** 1 while the player is holding the screen. */
   holding: SharedValue<number>;
   status: SharedValue<number>;
@@ -73,6 +86,8 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
   const shipX = useSharedValue(0);
   const shipY = useSharedValue(0.5);
   const shipVY = useSharedValue(0);
+  const trailX = useSharedValue<number[]>([0]);
+  const trailY = useSharedValue<number[]>([0.5]);
   const holding = useSharedValue(0);
   const status = useSharedValue<number>(STATUS_READY);
   const elapsed = useSharedValue(0);
@@ -154,6 +169,20 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     shipY.value = nextY;
     shipVY.value = (nextY - prevY) / dt;
 
+    // --- Trail history --------------------------------------------------------
+    const trailXs = trailX.value;
+    const trailYs = trailY.value;
+    trailXs.push(nextX);
+    trailYs.push(nextY);
+    let dropCount = 0;
+    while (dropCount < trailXs.length - 1 && trailXs[dropCount] < nextX - TRAIL_WORLD_SPAN) {
+      dropCount += 1;
+    }
+    if (dropCount > 0) {
+      trailXs.splice(0, dropCount);
+      trailYs.splice(0, dropCount);
+    }
+
     // --- Obstacles ----------------------------------------------------------
     const obstacleCount = geometry.obstacleX.length;
     let cursor = obstacleCursor.value;
@@ -181,11 +210,13 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     shipX.value = 0;
     shipY.value = startY;
     shipVY.value = 0;
+    trailX.value = [0];
+    trailY.value = [startY];
     holding.value = 0;
     elapsed.value = 0;
     obstacleCursor.value = 0;
     status.value = STATUS_READY;
-  }, [level, shipX, shipY, shipVY, holding, elapsed, obstacleCursor, status]);
+  }, [level, shipX, shipY, shipVY, trailX, trailY, holding, elapsed, obstacleCursor, status]);
 
   const start = useCallback(() => {
     if (status.value === STATUS_READY) status.value = STATUS_RUNNING;
@@ -210,6 +241,8 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     shipX,
     shipY,
     shipVY,
+    trailX,
+    trailY,
     holding,
     status,
     elapsed,
