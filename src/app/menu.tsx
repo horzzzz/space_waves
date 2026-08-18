@@ -72,13 +72,6 @@ export default function MenuScreen() {
           />
           <View style={styles.spacer} />
           <CoinBadge amount={save.coins} />
-          <IconButton
-            icon={require('@/assets/game/icons/plus.png')}
-            accessibilityLabel="Add coins"
-            onPress={() => {}}
-            size={24}
-            style={styles.plusButton}
-          />
         </View>
 
         <View style={styles.logoSlot}>
@@ -87,7 +80,7 @@ export default function MenuScreen() {
 
         <View style={styles.actions}>
           <GameButton label="Play" onPress={() => router.push('/mode')} />
-          <GameButton label="How to Fly" onPress={() => router.push('/tutorial')} badge={1} />
+          <GameButton label="How to Fly" onPress={() => router.push('/tutorial')} />
 
           <View style={styles.tileRow}>
             <IconTile
@@ -184,9 +177,6 @@ const styles = StyleSheet.create({
   },
   spacer: {
     flex: 1,
-  },
-  plusButton: {
-    marginLeft: Spacing.two,
   },
   logoSlot: {
     flex: 1,
