@@ -1,11 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ScreenFrame } from '@/components/ui/screen-frame';
-import { Gradients, Palette, Radius, Spacing } from '@/constants/theme';
+import { Palette, Spacing } from '@/constants/theme';
 import { TOTAL_LEVELS } from '@/game/levels';
 import { useGameState } from '@/state/store';
 
@@ -49,31 +47,26 @@ function LevelTile({
       disabled={!unlocked}
       onPress={onPress}
       style={styles.tileWrapper}>
-      <View style={styles.tileBorder}>
-        <View style={styles.tileFrame}>
-          <Image
-            source={require('@/assets/game/ui/metal-texture.png')}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-          />
-          <LinearGradient
-            colors={unlocked ? Gradients.ink : ['#5C636D', '#414852']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={styles.tileFace}>
-            {unlocked ? (
-              <>
-                <Text style={styles.tileNumber}>{id}</Text>
-                <Stars count={stars} />
-              </>
-            ) : (
-              <>
-                <Ionicons name="lock-closed" size={18} color="rgba(255,255,255,0.75)" />
-                <Text style={styles.tileNumberLocked}>{id}</Text>
-              </>
-            )}
-          </LinearGradient>
-        </View>
+      <View style={styles.tile}>
+        <Image
+          source={
+            unlocked
+              ? require('@/assets/game/ui/tile-level-active.png')
+              : require('@/assets/game/ui/tile-level-inactive.png')
+          }
+          style={StyleSheet.absoluteFill}
+          contentFit="contain"
+        />
+        {unlocked ? (
+          <View style={styles.tileContent}>
+            <Text style={styles.tileNumber}>{id}</Text>
+            <Stars count={stars} />
+          </View>
+        ) : (
+          <View style={styles.tileContentLocked}>
+            <Text style={styles.tileNumberLocked}>{id}</Text>
+          </View>
+        )}
       </View>
     </Pressable>
   );
@@ -81,12 +74,12 @@ function LevelTile({
 
 export default function LevelsScreen() {
   const router = useRouter();
-  const { save, starsFor, isLevelUnlocked } = useGameState();
+  const { starsFor, isLevelUnlocked } = useGameState();
 
   const levels = Array.from({ length: TOTAL_LEVELS }, (_, index) => index + 1);
 
   return (
-    <ScreenFrame title="Levels" coins={save.coins}>
+    <ScreenFrame title="Levels">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
         {levels.map((id) => (
           <LevelTile
@@ -116,25 +109,25 @@ const styles = StyleSheet.create({
     maxWidth: 88,
     padding: Spacing.half,
   },
-  tileBorder: {
+  tile: {
     flex: 1,
-    borderRadius: Radius.medium,
-    borderWidth: 2,
-    borderColor: Palette.metalEdge,
-    overflow: 'hidden',
   },
-  tileFrame: {
-    flex: 1,
-    padding: 3,
-  },
-  tileFace: {
-    flex: 1,
+  tileContent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
-    borderRadius: Radius.small,
-    borderWidth: 1,
-    borderColor: Palette.inkEdge,
+  },
+  tileContentLocked: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: '14%',
+    alignItems: 'center',
   },
   tileNumber: {
     color: Palette.textPrimary,

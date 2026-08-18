@@ -34,7 +34,7 @@ function Screw({ top, left }: { top?: number; left?: number }) {
 }
 
 /** Brushed-metal container used for every dialog and grouped control in the design. */
-export function MetalPanel({ children, screws = true, style, contentStyle }: Props) {
+export function MetalPanel({ children, style, contentStyle }: Props) {
   return (
     <View
       style={[
@@ -59,14 +59,6 @@ export function MetalPanel({ children, screws = true, style, contentStyle }: Pro
           ]}>
           {children}
         </View>
-        {screws && (
-          <>
-            <Screw top={Spacing.two} left={Spacing.two} />
-            <Screw top={Spacing.two} />
-            <Screw left={Spacing.two} />
-            <Screw />
-          </>
-        )}
       </View>
     </View>
   );

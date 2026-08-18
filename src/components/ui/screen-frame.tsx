@@ -100,6 +100,5 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: Spacing.four,
-    paddingBottom: Spacing.four,
   },
 });
