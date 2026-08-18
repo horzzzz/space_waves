@@ -93,7 +93,11 @@ export function InkPlate({
 }
 
 const styles = StyleSheet.create({
+  // flexGrow without a 0 flexBasis: fills a sized parent (e.g. a flex:1 screen
+  // panel) but still shrinks to its content's natural height in an auto-sized
+  // parent (e.g. a centered dialog) instead of collapsing to zero.
   fill: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
   },
 });

@@ -1,10 +1,5 @@
 /**
  * Music and sound effects.
- *
- * ── Missing assets ───────────────────────────────────────────────────────────
- * No audio files were supplied with the brief, so every entry in SOURCES is null
- * and playback is a no-op. Drop the files into `assets/audio/` and swap the nulls
- * for `require(...)` calls — nothing else needs to change.
  */
 
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer, type AudioSource } from 'expo-audio';
@@ -13,14 +8,13 @@ import * as Haptics from 'expo-haptics';
 export type MusicTrack = 'menu' | 'game';
 export type SfxName = 'win' | 'crash' | 'tap' | 'reward';
 
-/** Replace the nulls with `require('@/assets/audio/<file>')` once assets land. */
 const SOURCES: Record<MusicTrack | SfxName, AudioSource | null> = {
-  menu: null,
-  game: null,
-  win: null,
-  crash: null,
-  tap: null,
-  reward: null,
+  menu: require('@/assets/audio/music-menu.mp3'),
+  game: require('@/assets/audio/music-game.mp3'),
+  win: require('@/assets/audio/sfx-win.mp3'),
+  crash: require('@/assets/audio/sfx-crash.mp3'),
+  tap: require('@/assets/audio/sfx-tap.mp3'),
+  reward: require('@/assets/audio/sfx-reward.mp3'),
 };
 
 const MUSIC_VOLUME = 0.4;
