@@ -82,16 +82,13 @@ function clamp(value: number, min: number, max: number) {
 function difficultyFor(id: number) {
   // 0 at level 1, 1 at the final level.
   const t = clamp((id - 1) / (TOTAL_LEVELS - 1), 0, 1);
-  // Triangles stay out of the first few levels so the player learns the ride
-  // mechanic on open ground before the walls start biting.
-  const triangleT = clamp((id - 3) / (TOTAL_LEVELS - 3), 0, 1);
   return {
     /** Corridor half-height, normalized — the whole floor/ceiling gap for the level. */
     corridorWidth: lerp(0.34, 0.15, t),
     /** Chance per candidate slot that a fan/spike sprite obstacle is placed. */
-    obstacleChance: lerp(0.05, 0.32, t),
+    obstacleChance: lerp(0.4, 0.65, t),
     /** Chance per candidate slot that a triangle gets carved into a wall. */
-    triangleChance: id <= 3 ? 0 : lerp(0.08, 0.3, triangleT),
+    triangleChance: lerp(0.25, 0.5, t),
     /** Chance per carved triangle that a fan spawns right on its tip. */
     tipFanChance: 0.35,
     speed: lerp(250, 430, t),
@@ -163,9 +160,9 @@ function buildTriangles(
   bottomHazard: number[]
 ): CarvedTriangle[] {
   const sampleCount = top.length;
-  const firstSlot = Math.ceil(1400 / SEGMENT_WIDTH);
+  const firstSlot = Math.ceil(500 / SEGMENT_WIDTH);
   const lastSlot = sampleCount - Math.ceil(600 / SEGMENT_WIDTH);
-  const slotStride = 6;
+  const slotStride = 5;
   const triangles: CarvedTriangle[] = [];
 
   let cursor = firstSlot;
@@ -237,9 +234,9 @@ function buildLevel(id: number): Level {
   const obstacles: Obstacle[] = [];
 
   // Candidate slots start after the intro run-up and stop before the finish gate.
-  const firstSlot = Math.ceil(1400 / SEGMENT_WIDTH);
+  const firstSlot = Math.ceil(500 / SEGMENT_WIDTH);
   const lastSlot = sampleCount - Math.ceil(600 / SEGMENT_WIDTH);
-  const slotStride = 5;
+  const slotStride = 4;
   // A sprite is visually wider than one sample, so keep it clear of a carved
   // triangle's whole span, not just the exact slot — otherwise it can sit
   // half over an already-bitten (lower) stretch of wall and look unmounted.
