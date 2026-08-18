@@ -44,7 +44,8 @@
           "image": "./assets/images/logo.png",
           "imageWidth": 260
         }
-      ]
+      ],
+      "./plugins/withStartAppSdkFix.js"
     ],
     "experiments": {
       "typedRoutes": true
