@@ -19,6 +19,7 @@
       "package": "com.spacewaves.cosmiccrest",
       "adaptiveIcon": {
         "backgroundColor": "#0B1E3A",
+        "backgroundImage": "./assets/images/adaptive-icon-background.png",
         "foregroundImage": "./assets/images/adaptive-icon-foreground.png",
         "monochromeImage": "./assets/images/adaptive-icon-monochrome.png"
       },
