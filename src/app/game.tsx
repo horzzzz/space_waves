@@ -12,7 +12,7 @@ import { GameDialog } from '@/components/ui/game-dialog';
 import { IconButton } from '@/components/ui/icon-button';
 import { InkPlate } from '@/components/ui/metal-panel';
 import { Palette, Spacing, Type } from '@/constants/theme';
-import { useWaveEngine } from '@/game/engine';
+import { FINISH_OUTRO_MS, useWaveEngine } from '@/game/engine';
 import { getLevel, rewardForLevel, starsForRun, TOTAL_LEVELS } from '@/game/levels';
 import { GameRenderer } from '@/game/renderer';
 import { getPlaneSkin, getSkySkin, getTrailSkin } from '@/game/skins';
@@ -22,9 +22,6 @@ import { playMusic, playSfx, stopMusic, vibrate } from '@/services/audio';
 import { useGameState } from '@/state/store';
 
 type Phase = 'ready' | 'playing' | 'paused' | 'finishing' | 'won' | 'crashed';
-
-/** How long the spin-into-the-portal flourish plays before the win dialog appears. */
-const FINISH_OUTRO_MS = 850;
 
 export default function GameScreen() {
   const router = useRouter();

@@ -56,6 +56,8 @@ export type Level = {
   speed: number;
   /** Vertical speed in normalized units per second (the 45-degree wave feel). */
   climbRate: number;
+  /** World-x waypoints where the run auto-pauses (tutorial only), ascending order. */
+  checkpoints?: number[];
 };
 
 /** Small deterministic PRNG so a level id always yields the same course. */
@@ -97,10 +99,10 @@ function difficultyFor(id: number) {
   };
 }
 
-type TriangleSize = 'large' | 'medium';
+export type TriangleSize = 'large' | 'medium';
 
 /** Half-width (in samples) and how deep into the gap each size bites. */
-const TRIANGLE_PRESETS: Record<TriangleSize, { halfSamples: number; biteRatio: number }> = {
+export const TRIANGLE_PRESETS: Record<TriangleSize, { halfSamples: number; biteRatio: number }> = {
   large: { halfSamples: 6, biteRatio: 0.6 },
   medium: { halfSamples: 4, biteRatio: 0.4 },
 };
@@ -115,7 +117,7 @@ const TRIANGLE_PRESETS: Record<TriangleSize, { halfSamples: number; biteRatio: n
  * Peaks at `center` and eases to a point at both ends, matching a hand-carved
  * spike rather than a stepped block.
  */
-function carveTriangle(
+export function carveTriangle(
   top: number[],
   bottom: number[],
   topHazard: number[],

@@ -30,7 +30,6 @@ export default function MenuScreen() {
   const router = useRouter();
   const { save, claimDailyBonus } = useGameState();
   const [showDaily, setShowDaily] = useState(false);
-  const [showHowTo, setShowHowTo] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showCustomize, setShowCustomize] = useState(false);
 
@@ -88,7 +87,7 @@ export default function MenuScreen() {
 
         <View style={styles.actions}>
           <GameButton label="Play" onPress={() => router.push('/mode')} />
-          <GameButton label="How to Fly" onPress={() => setShowHowTo(true)} badge={1} />
+          <GameButton label="How to Fly" onPress={() => router.push('/tutorial')} badge={1} />
 
           <View style={styles.tileRow}>
             <IconTile
@@ -156,19 +155,6 @@ export default function MenuScreen() {
             disabled={!dailyReady}
             onPress={handleClaimDaily}
           />
-        </View>
-      </GameDialog>
-
-      <GameDialog visible={showHowTo} title="How to Fly" onClose={() => setShowHowTo(false)}>
-        <View style={styles.dialogBody}>
-          <InkPlate>
-            <Text style={[Type.body, styles.centered]}>
-              Hold anywhere to climb.{'\n'}
-              Release to dive.{'\n\n'}
-              Ride the gap, dodge the spikes and fans, and collect coins along the way.
-            </Text>
-          </InkPlate>
-          <GameButton label="Got It" onPress={() => setShowHowTo(false)} />
         </View>
       </GameDialog>
 

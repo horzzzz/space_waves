@@ -45,9 +45,14 @@ export const SHIP_SCREEN_X = 0.3;
  */
 const TRAIL_WORLD_SPAN = 500;
 
+/** How long the spin-into-the-portal flourish plays before the win dialog appears. */
+export const FINISH_OUTRO_MS = 850;
+
 type Callbacks = {
   onCrash: () => void;
   onWin: () => void;
+  /** Fires when the ship reaches a `Level.checkpoints` entry; the run pauses there until resumed. */
+  onCheckpoint?: (index: number) => void;
 };
 
 export type WaveEngine = {
@@ -74,6 +79,9 @@ export type WaveEngine = {
   pause: () => void;
   resume: () => void;
   setHolding: (value: boolean) => void;
+  /** Teleports the ship to `x`/`y` (e.g. tutorial Skip, or a checkpoint respawn after a crash),
+   *  resetting the trail and per-run cursors, and leaves the run paused there. */
+  seek: (x: number, y: number) => void;
 };
 
 /**
@@ -93,6 +101,7 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
   const elapsed = useSharedValue(0);
 
   const obstacleCursor = useSharedValue(0);
+  const checkpointCursor = useSharedValue(0);
 
   // Flatten the level into plain number arrays so the worklet closure stays cheap
   // to serialize onto the UI runtime.
@@ -105,6 +114,7 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
       obstacleX: level.obstacles.map((o) => o.x),
       obstacleY: level.obstacles.map((o) => o.y),
       obstacleR: level.obstacles.map((o) => o.radius),
+      checkpoints: level.checkpoints ?? [],
       length: level.length,
       speed: level.speed,
       climbRate: level.climbRate,
@@ -112,7 +122,7 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     [level]
   );
 
-  const { onCrash, onWin } = callbacks;
+  const { onCrash, onWin, onCheckpoint } = callbacks;
 
   useFrameCallback((frame) => {
     'worklet';
@@ -131,6 +141,17 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     let nextY = prevY + direction * geometry.climbRate * dt;
 
     shipX.value = nextX;
+
+    // --- Checkpoints: pause the run at each authored waypoint (tutorial only) -
+    const nextCheckpointIndex = checkpointCursor.value;
+    if (nextCheckpointIndex < geometry.checkpoints.length && nextX >= geometry.checkpoints[nextCheckpointIndex]) {
+      shipX.value = geometry.checkpoints[nextCheckpointIndex];
+      shipY.value = nextY;
+      checkpointCursor.value = nextCheckpointIndex + 1;
+      status.value = STATUS_PAUSED;
+      if (onCheckpoint) runOnJS(onCheckpoint)(nextCheckpointIndex);
+      return;
+    }
 
     if (nextX >= geometry.length) {
       status.value = STATUS_WON;
@@ -215,8 +236,9 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     holding.value = 0;
     elapsed.value = 0;
     obstacleCursor.value = 0;
+    checkpointCursor.value = 0;
     status.value = STATUS_READY;
-  }, [level, shipX, shipY, shipVY, trailX, trailY, holding, elapsed, obstacleCursor, status]);
+  }, [level, shipX, shipY, shipVY, trailX, trailY, holding, elapsed, obstacleCursor, checkpointCursor, status]);
 
   const start = useCallback(() => {
     if (status.value === STATUS_READY) status.value = STATUS_RUNNING;
@@ -237,6 +259,25 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     [holding]
   );
 
+  const seek = useCallback(
+    (x: number, y: number) => {
+      shipX.value = x;
+      shipY.value = y;
+      shipVY.value = 0;
+      trailX.value = [x];
+      trailY.value = [y];
+      holding.value = 0;
+      obstacleCursor.value = 0;
+      let cursor = 0;
+      while (cursor < geometry.checkpoints.length && geometry.checkpoints[cursor] <= x) {
+        cursor += 1;
+      }
+      checkpointCursor.value = cursor;
+      status.value = STATUS_PAUSED;
+    },
+    [shipX, shipY, shipVY, trailX, trailY, holding, obstacleCursor, checkpointCursor, status, geometry]
+  );
+
   return {
     shipX,
     shipY,
@@ -251,5 +292,6 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     pause,
     resume,
     setHolding,
+    seek,
   };
 }
