@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { CoinIcon } from '@/components/ui/coin-badge';
@@ -10,27 +9,55 @@ import { GameButton } from '@/components/ui/game-button';
 import { InkPlate } from '@/components/ui/metal-panel';
 import { Pulse } from '@/components/ui/pulse';
 import { ScreenFrame } from '@/components/ui/screen-frame';
-import { Gradients, Palette, Spacing, Type } from '@/constants/theme';
+import { MaxContentWidth, Palette, Spacing, Type } from '@/constants/theme';
 import { adsEnabled, showRewarded } from '@/services/ads';
 import { playSfx, vibrate } from '@/services/audio';
 import { formatCountdown, useGameState, wheelCooldownRemaining } from '@/state/store';
 
-/** Prize faces, alternating colors as in the design's red/green wheel. */
-const PRIZES = [50, 500, 100, 1000, 150, 200, 300, 5000];
-const SEGMENT_ANGLE = 360 / PRIZES.length;
+type Segment =
+  | { type: 'coins'; value: number }
+  | { type: 'fail' }
+  | { type: 'freeSpins'; value: number };
+
+/**
+ * Wheel faces, in the same clockwise order (starting at 12 o'clock) as the
+ * segments baked into `assets/game/wheel/WHEEL.png`. Keep this in sync with
+ * that art if it's ever re-exported.
+ */
+const SEGMENTS: Segment[] = [
+  { type: 'coins', value: 10000 },
+  { type: 'coins', value: 100 },
+  { type: 'fail' },
+  { type: 'coins', value: 500 },
+  { type: 'coins', value: 1000 },
+  { type: 'coins', value: 200 },
+  { type: 'freeSpins', value: 3 },
+  { type: 'coins', value: 300 },
+  { type: 'fail' },
+  { type: 'coins', value: 5000 },
+  { type: 'coins', value: 150 },
+  { type: 'coins', value: 800 },
+];
+
+const SEGMENT_ANGLE = 360 / SEGMENTS.length;
 const SPIN_DURATION_MS = 2600;
 
 type Phase = 'idle' | 'spinning' | 'result';
 
 export default function WheelScreen() {
   const { save, addCoins, recordWheelSpin } = useGameState();
+  const { width: windowWidth } = useWindowDimensions();
   const [remaining, setRemaining] = useState(() => wheelCooldownRemaining(save.lastWheelSpinAt));
   const [phase, setPhase] = useState<Phase>('idle');
-  const [prize, setPrize] = useState<number | null>(null);
+  const [result, setResult] = useState<Segment | null>(null);
+  const [freeSpins, setFreeSpins] = useState(0);
   const [claiming, setClaiming] = useState(false);
   const rotation = useSharedValue(0);
 
-  const ready = remaining === 0;
+  const contentWidth = Math.min(windowWidth, MaxContentWidth) - Spacing.four * 2;
+  const wheelSize = Math.min(contentWidth, 380);
+
+  const ready = (remaining === 0 || freeSpins > 0) && phase === 'idle';
 
   useEffect(() => {
     const timer = setInterval(() => setRemaining(wheelCooldownRemaining(save.lastWheelSpinAt)), 1000);
@@ -42,33 +69,54 @@ export default function WheelScreen() {
   }));
 
   const handleSpin = () => {
-    if (!ready || phase !== 'idle') return;
+    if (!ready) return;
     playSfx('tap');
     setPhase('spinning');
 
-    const index = Math.floor(Math.random() * PRIZES.length);
+    const usingFreeSpin = freeSpins > 0;
+    if (usingFreeSpin) {
+      setFreeSpins((count) => count - 1);
+    } else {
+      recordWheelSpin();
+    }
+
+    const index = Math.floor(Math.random() * SEGMENTS.length);
     const target = rotation.value + 360 * 5 + (360 - index * SEGMENT_ANGLE);
     rotation.value = withTiming(target, { duration: SPIN_DURATION_MS, easing: Easing.out(Easing.cubic) });
 
     setTimeout(() => {
-      setPrize(PRIZES[index]);
+      setResult(SEGMENTS[index]);
       setPhase('result');
-      recordWheelSpin();
       vibrate('medium');
     }, SPIN_DURATION_MS);
   };
 
   const handleClaim = async () => {
-    if (claiming || prize === null) return;
+    if (claiming || result === null) return;
+
+    if (result.type === 'fail') {
+      setPhase('idle');
+      setResult(null);
+      return;
+    }
+
+    if (result.type === 'freeSpins') {
+      setFreeSpins((count) => count + result.value);
+      playSfx('reward');
+      vibrate('success');
+      setPhase('idle');
+      setResult(null);
+      return;
+    }
 
     // No ad ID configured yet — grant the prize directly rather than showing an
     // ad affordance that can't actually play anything.
     if (!adsEnabled()) {
-      addCoins(prize);
+      addCoins(result.value);
       playSfx('reward');
       vibrate('success');
       setPhase('idle');
-      setPrize(null);
+      setResult(null);
       return;
     }
 
@@ -76,69 +124,81 @@ export default function WheelScreen() {
     const rewarded = await showRewarded('wheel_claim');
     setClaiming(false);
     if (rewarded) {
-      addCoins(prize);
+      addCoins(result.value);
       playSfx('reward');
       vibrate('success');
     }
     setPhase('idle');
-    setPrize(null);
+    setResult(null);
   };
 
+  const claimLabel =
+    result?.type === 'fail'
+      ? 'Continue'
+      : result?.type === 'freeSpins'
+        ? 'Claim'
+        : adsEnabled()
+          ? claiming
+            ? 'Loading...'
+            : 'Watch & Claim'
+          : 'Claim';
+
   return (
-    <ScreenFrame title="Wheel of Luck" coins={save.coins} contentStyle={styles.content}>
-      <View style={styles.stage}>
+    <ScreenFrame title="Wheel of Luck" contentStyle={styles.content}>
+      <View style={[styles.stage, { width: wheelSize + 20, height: wheelSize + 20 }]}>
         <Image source={require('@/assets/game/wheel/pointer.png')} style={styles.pointer} contentFit="contain" />
-        <Animated.View style={[styles.wheel, wheelStyle]}>
+        <Animated.View style={[{ width: wheelSize, height: wheelSize }, wheelStyle]}>
           <Image
-            source={require('@/assets/game/wheel/disc.png')}
+            source={require('@/assets/game/wheel/WHEEL.png')}
             style={StyleSheet.absoluteFill}
-            contentFit="cover"
+            contentFit="contain"
           />
-          {PRIZES.map((value, index) => (
-            <View
-              key={index}
-              style={[styles.segment, { transform: [{ rotate: `${index * SEGMENT_ANGLE}deg` }] }]}>
-              <View
-                style={[
-                  styles.segmentTick,
-                  { backgroundColor: index % 2 === 0 ? '#E2453B' : '#4F8E1E' },
-                ]}
-              />
-              <Text style={styles.segmentText}>{value}</Text>
-            </View>
-          ))}
-          <LinearGradient colors={Gradients.gold} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hub} />
         </Animated.View>
       </View>
 
-      {phase === 'result' && prize !== null ? (
+      {phase === 'result' && result !== null ? (
         <InkPlate style={styles.resultCard}>
-          <Text style={[Type.body, styles.centered]}>You won</Text>
-          <View style={styles.prizeRow}>
-            <CoinIcon size={22} />
-            <Text style={styles.prizeValue}>{prize}</Text>
-          </View>
+          {result.type === 'fail' ? (
+            <Text style={[Type.body, styles.centered]}>No luck this time</Text>
+          ) : result.type === 'freeSpins' ? (
+            <Text style={styles.prizeValue}>{result.value} Free Spins!</Text>
+          ) : (
+            <>
+              <Text style={[Type.body, styles.centered]}>You won</Text>
+              <View style={styles.prizeRow}>
+                <CoinIcon size={22} />
+                <Text style={styles.prizeValue}>{result.value}</Text>
+              </View>
+            </>
+          )}
         </InkPlate>
       ) : null}
 
-      <View style={styles.actionSlot}>
+      <View style={[styles.actionSlot, { width: wheelSize }]}>
         {phase === 'result' ? (
           <Pulse amount={0.05} periodMs={800}>
             <GameButton
-              label={adsEnabled() ? (claiming ? 'Loading...' : 'Watch & Claim') : 'Claim'}
+              label={claimLabel}
               tone="gold"
               disabled={claiming}
               onPress={handleClaim}
-              icon={adsEnabled() ? <Ionicons name="videocam" size={18} color={Palette.gold} /> : undefined}
+              style={styles.fullWidthButton}
+              icon={
+                result?.type === 'coins' && adsEnabled() ? (
+                  <Ionicons name="videocam" size={18} color={Palette.gold} />
+                ) : undefined
+              }
             />
           </Pulse>
-        ) : ready ? (
-          <View style={styles.spinBlock}>
-            <Pulse amount={0.04} periodMs={1100} enabled={phase === 'idle'}>
-              <GameButton label={phase === 'spinning' ? 'Spinning...' : 'Spin'} disabled={phase === 'spinning'} onPress={handleSpin} />
-            </Pulse>
-            <Text style={styles.tapLabel}>Tap</Text>
-          </View>
+        ) : ready || phase === 'spinning' ? (
+          <Pulse amount={0.04} periodMs={1100} enabled={phase === 'idle'}>
+            <GameButton
+              label={phase === 'spinning' ? 'Spinning...' : 'Spin'}
+              disabled={phase === 'spinning'}
+              onPress={handleSpin}
+              style={styles.fullWidthButton}
+            />
+          </Pulse>
         ) : (
           <View style={styles.cooldownBlock}>
             <InkPlate>
@@ -151,8 +211,6 @@ export default function WheelScreen() {
   );
 }
 
-const WHEEL_SIZE = 220;
-
 const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
@@ -160,47 +218,8 @@ const styles = StyleSheet.create({
     gap: Spacing.five,
   },
   stage: {
-    width: WHEEL_SIZE + 20,
-    height: WHEEL_SIZE + 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  wheel: {
-    width: WHEEL_SIZE,
-    height: WHEEL_SIZE,
-    borderRadius: WHEEL_SIZE / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  segment: {
-    position: 'absolute',
-    width: WHEEL_SIZE,
-    height: WHEEL_SIZE,
-    alignItems: 'center',
-  },
-  segmentTick: {
-    position: 'absolute',
-    top: 4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  segmentText: {
-    marginTop: 14,
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '900',
-    textShadowColor: 'rgba(0,0,0,0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  hub: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 3,
-    borderColor: Palette.goldDark,
   },
   pointer: {
     position: 'absolute',
@@ -230,20 +249,10 @@ const styles = StyleSheet.create({
   actionSlot: {
     minHeight: 80,
     justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  fullWidthButton: {
     width: '100%',
-    maxWidth: 280,
-  },
-  spinBlock: {
-    alignItems: 'center',
-    gap: Spacing.one,
-  },
-  tapLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0,0,0,0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
   cooldownBlock: {
     alignItems: 'center',

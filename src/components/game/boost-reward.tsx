@@ -119,7 +119,7 @@ export function BoostReward({ baseAmount, onSettled }: Props) {
         <Image source={require('@/assets/game/wheel/pointer.png')} style={styles.pointer} contentFit="contain" />
         <Animated.View style={[styles.wheel, wheelStyle]}>
           <Image
-            source={require('@/assets/game/wheel/disc.png')}
+            source={require('@/assets/game/ui/metal-texture.png')}
             style={StyleSheet.absoluteFill}
             contentFit="cover"
           />
