@@ -8,6 +8,11 @@
  * Because the ship only ever moves forward, collision state is tracked with
  * monotonically advancing cursors instead of per-object "already handled" flags.
  *
+ * The corridor edges double as ground: touching a non-hazard edge clamps the
+ * ship onto it (riding the floor/ceiling) instead of ending the run — only a
+ * carved triangle (`topHazard`/`bottomHazard`, baked in by `levels.ts`) or an
+ * obstacle kills.
+ *
  * `react-hooks/immutability` does not model Reanimated's `.value` mutation
  * pattern (a ref-like escape hatch from React's render model, same idea as
  * `useRef().current`) and flags every write in this file as if it mutated React
@@ -42,6 +47,10 @@ export type WaveEngine = {
   shipX: SharedValue<number>;
   /** Ship height, normalized to the playfield (0 = top). */
   shipY: SharedValue<number>;
+  /** Actual vertical speed last frame (normalized/sec) — differs from the raw
+   *  hold/release rate while riding the ground, so the renderer can tilt the
+   *  ship to the slope it's actually on rather than the input direction. */
+  shipVY: SharedValue<number>;
   /** 1 while the player is holding the screen. */
   holding: SharedValue<number>;
   status: SharedValue<number>;
@@ -63,6 +72,7 @@ export type WaveEngine = {
 export function useWaveEngine(level: Level, playHeight: number, callbacks: Callbacks): WaveEngine {
   const shipX = useSharedValue(0);
   const shipY = useSharedValue(0.5);
+  const shipVY = useSharedValue(0);
   const holding = useSharedValue(0);
   const status = useSharedValue<number>(STATUS_READY);
   const elapsed = useSharedValue(0);
@@ -75,6 +85,8 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     () => ({
       top: level.top,
       bottom: level.bottom,
+      topHazard: level.topHazard,
+      bottomHazard: level.bottomHazard,
       obstacleX: level.obstacles.map((o) => o.x),
       obstacleY: level.obstacles.map((o) => o.y),
       obstacleR: level.obstacles.map((o) => o.radius),
@@ -98,12 +110,12 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
 
     elapsed.value += dt;
 
+    const prevY = shipY.value;
     const nextX = shipX.value + geometry.speed * dt;
     const direction = holding.value === 1 ? -1 : 1;
-    const nextY = shipY.value + direction * geometry.climbRate * dt;
+    let nextY = prevY + direction * geometry.climbRate * dt;
 
     shipX.value = nextX;
-    shipY.value = nextY;
 
     if (nextX >= geometry.length) {
       status.value = STATUS_WON;
@@ -111,7 +123,7 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
       return;
     }
 
-    // --- Corridor walls -----------------------------------------------------
+    // --- Corridor walls: ride a plain edge, die on a carved triangle ---------
     const rawIndex = nextX / SEGMENT_WIDTH;
     const index = Math.floor(rawIndex);
     const frac = rawIndex - index;
@@ -122,11 +134,25 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     const topY = geometry.top[i0] + (geometry.top[i1] - geometry.top[i0]) * frac;
     const bottomY = geometry.bottom[i0] + (geometry.bottom[i1] - geometry.bottom[i0]) * frac;
 
-    if (nextY - SHIP_RADIUS < topY || nextY + SHIP_RADIUS > bottomY) {
-      status.value = STATUS_CRASHED;
-      runOnJS(onCrash)();
-      return;
+    if (nextY - SHIP_RADIUS < topY) {
+      if (geometry.topHazard[i0] === 1) {
+        status.value = STATUS_CRASHED;
+        runOnJS(onCrash)();
+        return;
+      }
+      nextY = topY + SHIP_RADIUS;
     }
+    if (nextY + SHIP_RADIUS > bottomY) {
+      if (geometry.bottomHazard[i0] === 1) {
+        status.value = STATUS_CRASHED;
+        runOnJS(onCrash)();
+        return;
+      }
+      nextY = bottomY - SHIP_RADIUS;
+    }
+
+    shipY.value = nextY;
+    shipVY.value = (nextY - prevY) / dt;
 
     // --- Obstacles ----------------------------------------------------------
     const obstacleCount = geometry.obstacleX.length;
@@ -154,11 +180,12 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     const startY = (level.top[0] + level.bottom[0]) / 2;
     shipX.value = 0;
     shipY.value = startY;
+    shipVY.value = 0;
     holding.value = 0;
     elapsed.value = 0;
     obstacleCursor.value = 0;
     status.value = STATUS_READY;
-  }, [level, shipX, shipY, holding, elapsed, obstacleCursor, status]);
+  }, [level, shipX, shipY, shipVY, holding, elapsed, obstacleCursor, status]);
 
   const start = useCallback(() => {
     if (status.value === STATUS_READY) status.value = STATUS_RUNNING;
@@ -182,6 +209,7 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
   return {
     shipX,
     shipY,
+    shipVY,
     holding,
     status,
     elapsed,

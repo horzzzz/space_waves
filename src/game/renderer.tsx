@@ -50,7 +50,7 @@ const CLOUD_PARALLAX = 0.35;
 const WALL_TILE_SIZE = 220;
 
 export function GameRenderer({ engine, level, width, height, plane, trail, sky }: Props) {
-  const { shipX, shipY, holding, elapsed } = engine;
+  const { shipX, shipY, shipVY, elapsed } = engine;
 
   const shipRadiusPx = SHIP_RADIUS * height;
   const shipScreenX = width * SHIP_SCREEN_X;
@@ -153,8 +153,9 @@ export function GameRenderer({ engine, level, width, height, plane, trail, sky }
   const trailHeight = shipRadiusPx * 1.1;
 
   const shipTransform = useDerivedValue(() => {
-    // Tilt to match the actual flight vector so the nose points where it travels.
-    const rise = (holding.value === 1 ? -1 : 1) * level.climbRate * height;
+    // Tilt to the ship's actual vertical speed (not the raw hold/release input)
+    // so it flies level while riding the ground instead of nosing down.
+    const rise = shipVY.value * height;
     const angle = Math.atan2(rise, level.speed);
     return [{ translateX: shipScreenX }, { translateY: shipY.value * height }, { rotate: angle }];
   });
@@ -249,8 +250,14 @@ type ObstacleSpriteProps = {
 };
 
 /**
- * A single obstacle sprite. Fans spin about their hub; spikes mirror vertically
- * depending on which wall they grow from (the source art points up, floor-mounted).
+ * A single obstacle sprite, always flush against the wall it grows from —
+ * see `depth` below for how "flush" is kept exact despite each sprite having
+ * a different (non-square) source aspect ratio.
+ *
+ * Fans spin about their hub. Cones already point up in the source art, so a
+ * ceiling mount just flips them vertically. The cluster's source points its
+ * three spikes *sideways* (drawn for a side wall), so mounting it on the
+ * floor/ceiling needs an actual 90° rotation rather than a flip.
  */
 function ObstacleSprite({
   obstacle,
@@ -263,24 +270,38 @@ function ObstacleSprite({
 }: ObstacleSpriteProps) {
   const image =
     obstacle.kind === 'fan' ? fanImage : obstacle.spikeVariant === 'cluster' ? spikeClusterImage : spikeConeImage;
-  const size = obstacle.radius * height * 2.3;
+  const rotated = obstacle.kind === 'spike' && obstacle.spikeVariant === 'cluster';
+
+  // `depth` is the away-from-wall extent `levels.ts` placed the obstacle
+  // center `depth / 2` from the wall for, so it must be exactly the drawn
+  // size on the screen-vertical axis — whichever source axis that is depends
+  // on whether this variant gets rotated 90° (see the class doc above).
+  // Drawing into a box sized to the sprite's own aspect ratio (instead of a
+  // square with `fit="contain"`) avoids letterbox padding, so the visible
+  // art — not just the invisible bounding box — actually reaches the wall.
+  const depth = obstacle.radius * height * 2.3;
+  const aspect = image ? image.width() / image.height() : 1;
+  const drawnW = rotated ? depth : depth * aspect;
+  const drawnH = rotated ? depth / aspect : depth;
 
   const transform = useDerivedValue(() => {
-    const rotate = obstacle.kind === 'fan' ? elapsed.value * obstacle.spin : 0;
-    const scaleY = obstacle.kind === 'spike' && obstacle.towardTop ? -1 : 1;
-    return [
-      { translateX: obstacle.x - cameraX.value },
-      { translateY: obstacle.y * height },
-      { rotate },
-      { scaleY },
-    ];
+    const translate = [{ translateX: obstacle.x - cameraX.value }, { translateY: obstacle.y * height }];
+    if (rotated) {
+      // Cluster: rotate to point at the corridor instead of sideways.
+      return [...translate, { rotate: obstacle.towardTop ? Math.PI / 2 : -Math.PI / 2 }];
+    }
+    if (obstacle.kind === 'fan') {
+      return [...translate, { rotate: elapsed.value * obstacle.spin }];
+    }
+    // Cone: source already points up — flip vertically for a ceiling mount.
+    return [...translate, { scaleY: obstacle.towardTop ? -1 : 1 }];
   });
 
   if (!image) return null;
 
   return (
     <Group transform={transform}>
-      <SkiaImage image={image} x={-size / 2} y={-size / 2} width={size} height={size} fit="contain" />
+      <SkiaImage image={image} x={-drawnW / 2} y={-drawnH / 2} width={drawnW} height={drawnH} fit="contain" />
     </Group>
   );
 }
