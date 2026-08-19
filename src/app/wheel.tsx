@@ -21,8 +21,8 @@ type Segment =
 
 /**
  * Wheel faces, in the same clockwise order (starting at 12 o'clock) as the
- * segments baked into `assets/game/wheel/WHEEL.png`. Keep this in sync with
- * that art if it's ever re-exported.
+ * segments baked into `assets/game/wheel/sectors.webp`. Keep this in sync
+ * with that art if it's ever re-exported.
  */
 const SEGMENTS: Segment[] = [
   { type: 'coins', value: 10000 },
@@ -147,13 +147,20 @@ export default function WheelScreen() {
     <ScreenFrame title="Wheel of Luck" contentStyle={styles.content}>
       <View style={[styles.stage, { width: wheelSize + 20, height: wheelSize + 20 }]}>
         <Image source={require('@/assets/game/wheel/pointer.webp')} style={styles.pointer} contentFit="contain" />
-        <Animated.View style={[{ width: wheelSize, height: wheelSize }, wheelStyle]}>
+        <View style={{ width: wheelSize, height: wheelSize }}>
           <Image
-            source={require('@/assets/game/wheel/WHEEL.webp')}
+            source={require('@/assets/game/wheel/disc.webp')}
             style={StyleSheet.absoluteFill}
             contentFit="contain"
           />
-        </Animated.View>
+          <Animated.View style={[StyleSheet.absoluteFill, wheelStyle]}>
+            <Image
+              source={require('@/assets/game/wheel/sectors.webp')}
+              style={StyleSheet.absoluteFill}
+              contentFit="contain"
+            />
+          </Animated.View>
+        </View>
       </View>
 
       {phase === 'result' && result !== null ? (
