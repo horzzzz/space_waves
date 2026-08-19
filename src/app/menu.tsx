@@ -84,8 +84,8 @@ export default function MenuScreen() {
         </View>
 
         <View style={styles.actions}>
-          <GameButton label="Play" onPress={() => router.push('/mode')} />
-          <GameButton label="How to Fly" onPress={() => router.push('/tutorial')} />
+          <GameButton label="Play" aspectRatio={3.2} onPress={() => router.push('/mode')} />
+          <GameButton label="How to Fly" aspectRatio={3.2} onPress={() => router.push('/tutorial')} />
 
           <View style={styles.tileRow}>
             <IconTile
@@ -116,6 +116,7 @@ export default function MenuScreen() {
           <GameButton
             label="Customize"
             icon={<Ionicons name="construct" size={22} color={Palette.textPrimary} />}
+            aspectRatio={3.2}
             onPress={() => setShowCustomize(true)}
           />
         </View>

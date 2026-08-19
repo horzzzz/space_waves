@@ -28,6 +28,8 @@ type Props = {
   /** Optional element rendered before the label, e.g. a video or coin glyph. */
   icon?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  /** Forces the button's width:height ratio (e.g. 4 for a 4:1 wide bar), overriding its content-driven height. */
+  aspectRatio?: number;
   compact?: boolean;
   /** Shows the red attention dot (with a count) used for unread/available notices. */
   badge?: number;
@@ -52,6 +54,7 @@ export function GameButton({
   tone = 'default',
   icon,
   style,
+  aspectRatio,
   compact = false,
   badge,
   uppercase = true,
@@ -85,7 +88,7 @@ export function GameButton({
       onPressOut={() => (pressed.value = withTiming(0, { duration: 120 }))}
       style={[animatedStyle, { opacity: disabled ? 0.5 : 1 }, style]}>
       {tone === 'default' ? (
-        <View style={{ borderRadius: Radius.medium, overflow: 'hidden' }}>
+        <View style={{ borderRadius: Radius.medium, overflow: 'hidden', aspectRatio }}>
           <Image
             source={require('@/assets/game/ui/button-panel.webp')}
             style={StyleSheet.absoluteFill}
@@ -93,6 +96,7 @@ export function GameButton({
           />
           <View
             style={{
+              flex: aspectRatio ? 1 : undefined,
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
