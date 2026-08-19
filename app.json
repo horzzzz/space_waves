@@ -18,10 +18,8 @@
     "android": {
       "package": "com.spacewaves.cosmiccrest",
       "adaptiveIcon": {
-        "backgroundColor": "#0B1E3A",
-        "backgroundImage": "./assets/images/adaptive-icon-background.png",
-        "foregroundImage": "./assets/images/adaptive-icon-foreground.png",
-        "monochromeImage": "./assets/images/adaptive-icon-monochrome.png"
+        "backgroundColor": "#097DE0",
+        "foregroundImage": "./assets/images/adaptive-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
