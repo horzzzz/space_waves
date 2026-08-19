@@ -25,6 +25,8 @@ export type TrailSkin = BaseSkin & {
 
 export type SkySkin = BaseSkin & {
   image: ImageSourcePropType;
+  /** Small square thumbnail shown in the customization shop; falls back to `image` if unset. */
+  previewImage?: ImageSourcePropType;
 };
 
 export const PLANE_SKINS: readonly PlaneSkin[] = [
@@ -51,14 +53,62 @@ export const TRAIL_SKINS: readonly TrailSkin[] = [
 ];
 
 export const SKY_SKINS: readonly SkySkin[] = [
-  { id: 'day', name: 'Clear Day', price: 0, image: require('@/assets/game/sky/day.webp') },
-  { id: 'sunset', name: 'Sunset', price: 500, image: require('@/assets/game/sky/sunset.webp') },
-  { id: 'night', name: 'Night', price: 1000, image: require('@/assets/game/sky/night.webp') },
-  { id: 'dawn', name: 'Dawn', price: 1500, image: require('@/assets/game/sky/dawn.webp') },
-  { id: 'storm', name: 'Storm', price: 2000, image: require('@/assets/game/sky/storm.webp') },
-  { id: 'aurora', name: 'Aurora', price: 2500, image: require('@/assets/game/sky/aurora.webp') },
-  { id: 'nebula', name: 'Nebula', price: 3000, image: require('@/assets/game/sky/nebula.webp') },
-  { id: 'cosmic', name: 'Cosmic Crest', price: 4000, image: require('@/assets/game/sky/cosmic.webp') },
+  {
+    id: 'day',
+    name: 'Clear Day',
+    price: 0,
+    image: require('@/assets/game/sky/day.webp'),
+    previewImage: require('@/assets/game/sky/preview/day.webp'),
+  },
+  {
+    id: 'sunset',
+    name: 'Sunset',
+    price: 500,
+    image: require('@/assets/game/sky/sunset.webp'),
+    previewImage: require('@/assets/game/sky/preview/sunset.webp'),
+  },
+  {
+    id: 'night',
+    name: 'Night',
+    price: 1000,
+    image: require('@/assets/game/sky/night.webp'),
+    previewImage: require('@/assets/game/sky/preview/night.webp'),
+  },
+  {
+    id: 'dawn',
+    name: 'Dawn',
+    price: 1500,
+    image: require('@/assets/game/sky/dawn.webp'),
+    previewImage: require('@/assets/game/sky/preview/dawn.webp'),
+  },
+  {
+    id: 'storm',
+    name: 'Storm',
+    price: 2000,
+    image: require('@/assets/game/sky/storm.webp'),
+    previewImage: require('@/assets/game/sky/preview/storm.webp'),
+  },
+  {
+    id: 'aurora',
+    name: 'Aurora',
+    price: 2500,
+    image: require('@/assets/game/sky/aurora.webp'),
+    previewImage: require('@/assets/game/sky/preview/aurora.webp'),
+  },
+  {
+    id: 'nebula',
+    name: 'Nebula',
+    price: 3000,
+    image: require('@/assets/game/sky/nebula.webp'),
+    previewImage: require('@/assets/game/sky/preview/nebula.webp'),
+  },
+  {
+    id: 'cosmic',
+    name: 'Cosmic Crest',
+    price: 4000,
+    image: require('@/assets/game/sky/cosmic.webp'),
+    previewImage: require('@/assets/game/sky/preview/cosmic.webp'),
+  },
 ];
 
 export const DEFAULT_SKINS = {

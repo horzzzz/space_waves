@@ -28,7 +28,7 @@ export function TrailPreview({ skin }: { skin: TrailSkin }) {
 export function SkyPreview({ skin, size = 64 }: { skin: SkySkin; size?: number }) {
   return (
     <View style={{ width: size, height: size, borderRadius: Radius.medium, overflow: 'hidden' }}>
-      <Image source={skin.image} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+      <Image source={skin.previewImage ?? skin.image} style={{ width: '100%', height: '100%' }} contentFit="cover" />
     </View>
   );
 }
