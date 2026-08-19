@@ -73,9 +73,10 @@ export default function MenuScreen() {
             icon={require('@/assets/game/icons/settings.webp')}
             accessibilityLabel="Settings"
             onPress={() => setShowSettings(true)}
+            size={53}
           />
           <View style={styles.spacer} />
-          <CoinBadge amount={save.coins} />
+          <CoinBadge amount={save.coins} size={19} style={styles.coinBadgeBig} />
         </View>
 
         <View style={styles.logoSlot}>
@@ -185,6 +186,11 @@ const styles = StyleSheet.create({
   },
   spacer: {
     flex: 1,
+  },
+  coinBadgeBig: {
+    height: 43,
+    paddingHorizontal: Spacing.three * 1.2,
+    gap: Spacing.two * 1.2,
   },
   logoSlot: {
     flex: 1,

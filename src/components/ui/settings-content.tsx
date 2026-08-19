@@ -3,9 +3,10 @@ import { useEffect } from 'react';
 import { openBrowserAsync } from 'expo-web-browser';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { InkPlate } from '@/components/ui/metal-panel';
 import { ToggleRow } from '@/components/ui/toggle-row';
 import { getLegalUrls } from '@/constants/config';
-import { Palette, Spacing } from '@/constants/theme';
+import { Palette, Spacing, Type } from '@/constants/theme';
 import { reportSettingsOpen } from '@/services/analytics';
 import { useGameState } from '@/state/store';
 
@@ -32,34 +33,36 @@ export function SettingsContent() {
   }, []);
 
   return (
-    <View>
-      <ToggleRow label="Music" value={save.settings.music} onValueChange={(value) => setSetting('music', value)} />
-      <ToggleRow label="Sound" value={save.settings.sound} onValueChange={(value) => setSetting('sound', value)} />
-      <ToggleRow
-        label="Vibration"
-        value={save.settings.vibration}
-        onValueChange={(value) => setSetting('vibration', value)}
-      />
-      <ToggleRow
-        label="Notifications"
-        value={save.settings.notifications}
-        onValueChange={(value) => setSetting('notifications', value)}
-      />
+    <View style={styles.groups}>
+      <InkPlate style={styles.group}>
+        <ToggleRow label="Music" value={save.settings.music} onValueChange={(value) => setSetting('music', value)} />
+        <ToggleRow label="Sound" value={save.settings.sound} onValueChange={(value) => setSetting('sound', value)} />
+        <ToggleRow
+          label="Vibration"
+          value={save.settings.vibration}
+          onValueChange={(value) => setSetting('vibration', value)}
+        />
+        <ToggleRow
+          label="Notifications"
+          value={save.settings.notifications}
+          onValueChange={(value) => setSetting('notifications', value)}
+        />
+      </InkPlate>
 
-      <View style={styles.divider} />
-
-      <NavRow label="Privacy Policy" onPress={() => openBrowserAsync(legal.privacyUrl)} />
-      <NavRow label="Terms Of Use" onPress={() => openBrowserAsync(legal.termsUrl)} />
+      <InkPlate style={styles.group}>
+        <NavRow label="Privacy Policy" onPress={() => openBrowserAsync(legal.privacyUrl)} />
+        <NavRow label="Terms Of Use" onPress={() => openBrowserAsync(legal.termsUrl)} />
+      </InkPlate>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  divider: {
-    height: 2,
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    marginVertical: Spacing.two,
-    borderRadius: 1,
+  groups: {
+    gap: Spacing.four,
+  },
+  group: {
+    gap: Spacing.four,
   },
   navRow: {
     flexDirection: 'row',
@@ -68,13 +71,12 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
   },
   navLabel: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...Type.heading,
     color: Palette.textPrimary,
   },
   navArrow: {
-    width: 28,
-    height: 28,
+    width: 36,
+    height: 36,
     transform: [{ scaleX: -1 }],
   },
 });

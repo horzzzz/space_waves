@@ -12,7 +12,7 @@ type Props = {
 export function ToggleRow({ label, value, onValueChange }: Props) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.three }}>
-      <Text style={[Type.body, { color: Palette.textPrimary }]}>{label}</Text>
+      <Text style={[Type.heading, { color: Palette.textPrimary }]}>{label}</Text>
       <Switch
         value={value}
         onValueChange={onValueChange}
