@@ -14,7 +14,7 @@ function NavRow({ label, onPress }: { label: string; onPress: () => void }) {
     <Pressable accessibilityRole="button" onPress={onPress} style={styles.navRow}>
       <Text style={styles.navLabel}>{label}</Text>
       <Image
-        source={require('@/assets/game/icons/back.png')}
+        source={require('@/assets/game/icons/back.webp')}
         style={styles.navArrow}
         contentFit="contain"
       />

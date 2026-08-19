@@ -114,12 +114,12 @@ export function GameRenderer({ engine, level, width, height, plane, trail, sky, 
     return path;
   });
 
-  const stoneImage = useImage(require('@/assets/game/walls/stone.png'));
+  const stoneImage = useImage(require('@/assets/game/walls/stone.webp'));
 
   // --- Obstacles ------------------------------------------------------------
-  const fanImage = useImage(require('@/assets/game/obstacles/fan.png'));
-  const spikeClusterImage = useImage(require('@/assets/game/obstacles/spike-cluster.png'));
-  const spikeConeImage = useImage(require('@/assets/game/obstacles/spike-cone.png'));
+  const fanImage = useImage(require('@/assets/game/obstacles/fan.webp'));
+  const spikeClusterImage = useImage(require('@/assets/game/obstacles/spike-cluster.webp'));
+  const spikeConeImage = useImage(require('@/assets/game/obstacles/spike-cone.webp'));
 
   // --- Parallax clouds ------------------------------------------------------
   const cloudsPath = useDerivedValue(() => {

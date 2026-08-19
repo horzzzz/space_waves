@@ -17,8 +17,8 @@ function Stars({ count }: { count: number }) {
           key={index}
           source={
             index < count
-              ? require('@/assets/game/icons/star-filled.png')
-              : require('@/assets/game/icons/star-empty.png')
+              ? require('@/assets/game/icons/star-filled.webp')
+              : require('@/assets/game/icons/star-empty.webp')
           }
           style={styles.star}
           contentFit="contain"
@@ -51,8 +51,8 @@ function LevelTile({
         <Image
           source={
             unlocked
-              ? require('@/assets/game/ui/tile-level-active.png')
-              : require('@/assets/game/ui/tile-level-inactive.png')
+              ? require('@/assets/game/ui/tile-level-active.webp')
+              : require('@/assets/game/ui/tile-level-inactive.webp')
           }
           style={StyleSheet.absoluteFill}
           contentFit="contain"

@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -146,10 +146,10 @@ export default function WheelScreen() {
   return (
     <ScreenFrame title="Wheel of Luck" contentStyle={styles.content}>
       <View style={[styles.stage, { width: wheelSize + 20, height: wheelSize + 20 }]}>
-        <Image source={require('@/assets/game/wheel/pointer.png')} style={styles.pointer} contentFit="contain" />
+        <Image source={require('@/assets/game/wheel/pointer.webp')} style={styles.pointer} contentFit="contain" />
         <Animated.View style={[{ width: wheelSize, height: wheelSize }, wheelStyle]}>
           <Image
-            source={require('@/assets/game/wheel/WHEEL.png')}
+            source={require('@/assets/game/wheel/WHEEL.webp')}
             style={StyleSheet.absoluteFill}
             contentFit="contain"
           />

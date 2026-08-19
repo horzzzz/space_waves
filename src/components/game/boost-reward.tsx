@@ -9,7 +9,7 @@
  * The boosted amount is only granted when the video actually reports a reward.
  */
 
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
@@ -116,10 +116,10 @@ export function BoostReward({ baseAmount, onSettled }: Props) {
   return (
     <View style={styles.wheelBlock}>
       <View style={styles.wheelStage}>
-        <Image source={require('@/assets/game/wheel/pointer.png')} style={styles.pointer} contentFit="contain" />
+        <Image source={require('@/assets/game/wheel/pointer.webp')} style={styles.pointer} contentFit="contain" />
         <Animated.View style={[styles.wheel, wheelStyle]}>
           <Image
-            source={require('@/assets/game/ui/metal-texture.png')}
+            source={require('@/assets/game/ui/metal-texture.webp')}
             style={StyleSheet.absoluteFill}
             contentFit="cover"
           />

@@ -44,7 +44,7 @@ export function GameDialog({ visible, title, children, onClose, dismissable = tr
 
         {onClose && (
           <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={styles.closeButton}>
-            <Image source={require('@/assets/game/icons/close.png')} style={styles.closeIcon} contentFit="contain" />
+            <Image source={require('@/assets/game/icons/close.webp')} style={styles.closeIcon} contentFit="contain" />
           </Pressable>
         )}
       </Animated.View>

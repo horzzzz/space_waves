@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -73,7 +73,7 @@ export function ShopContent() {
       {adsEnabled() && (
         <InkPlate style={styles.freeCoinsCard}>
           <Image
-            source={require('@/assets/game/ui/rewarded-coins.png')}
+            source={require('@/assets/game/ui/rewarded-coins.webp')}
             style={styles.freeCoinsArt}
             contentFit="contain"
           />

@@ -28,37 +28,37 @@ export type SkySkin = BaseSkin & {
 };
 
 export const PLANE_SKINS: readonly PlaneSkin[] = [
-  { id: 'classic', name: 'Classic', price: 0, image: require('@/assets/game/plane/classic.png') },
-  { id: 'azure', name: 'Azure', price: 500, image: require('@/assets/game/plane/azure.png') },
-  { id: 'crimson', name: 'Crimson', price: 1000, image: require('@/assets/game/plane/crimson.png') },
-  { id: 'emerald', name: 'Emerald', price: 1500, image: require('@/assets/game/plane/emerald.png') },
-  { id: 'violet', name: 'Violet', price: 2000, image: require('@/assets/game/plane/violet.png') },
-  { id: 'sunset', name: 'Sunset', price: 2500, image: require('@/assets/game/plane/sunset.png') },
-  { id: 'arctic', name: 'Arctic', price: 3000, image: require('@/assets/game/plane/arctic.png') },
-  { id: 'cosmic', name: 'Cosmic', price: 4000, image: require('@/assets/game/plane/cosmic.png') },
-  { id: 'bubblegum', name: 'Bubblegum', price: 4500, image: require('@/assets/game/plane/bubblegum.png') },
+  { id: 'classic', name: 'Classic', price: 0, image: require('@/assets/game/plane/classic.webp') },
+  { id: 'azure', name: 'Azure', price: 500, image: require('@/assets/game/plane/azure.webp') },
+  { id: 'crimson', name: 'Crimson', price: 1000, image: require('@/assets/game/plane/crimson.webp') },
+  { id: 'emerald', name: 'Emerald', price: 1500, image: require('@/assets/game/plane/emerald.webp') },
+  { id: 'violet', name: 'Violet', price: 2000, image: require('@/assets/game/plane/violet.webp') },
+  { id: 'sunset', name: 'Sunset', price: 2500, image: require('@/assets/game/plane/sunset.webp') },
+  { id: 'arctic', name: 'Arctic', price: 3000, image: require('@/assets/game/plane/arctic.webp') },
+  { id: 'cosmic', name: 'Cosmic', price: 4000, image: require('@/assets/game/plane/cosmic.webp') },
+  { id: 'bubblegum', name: 'Bubblegum', price: 4500, image: require('@/assets/game/plane/bubblegum.webp') },
 ];
 
 export const TRAIL_SKINS: readonly TrailSkin[] = [
-  { id: 'smoke', name: 'Smoke', price: 0, image: require('@/assets/game/trail/smoke.png') },
-  { id: 'aqua', name: 'Aqua', price: 500, image: require('@/assets/game/trail/aqua.png') },
-  { id: 'fire', name: 'Fire', price: 1000, image: require('@/assets/game/trail/fire.png') },
-  { id: 'toxic', name: 'Toxic', price: 1500, image: require('@/assets/game/trail/toxic.png') },
-  { id: 'candy', name: 'Candy', price: 2000, image: require('@/assets/game/trail/candy.png') },
-  { id: 'ice', name: 'Ice', price: 2500, image: require('@/assets/game/trail/ice.png') },
-  { id: 'ember', name: 'Ember', price: 3000, image: require('@/assets/game/trail/ember.png') },
-  { id: 'royal', name: 'Royal', price: 4000, image: require('@/assets/game/trail/royal.png') },
+  { id: 'smoke', name: 'Smoke', price: 0, image: require('@/assets/game/trail/smoke.webp') },
+  { id: 'aqua', name: 'Aqua', price: 500, image: require('@/assets/game/trail/aqua.webp') },
+  { id: 'fire', name: 'Fire', price: 1000, image: require('@/assets/game/trail/fire.webp') },
+  { id: 'toxic', name: 'Toxic', price: 1500, image: require('@/assets/game/trail/toxic.webp') },
+  { id: 'candy', name: 'Candy', price: 2000, image: require('@/assets/game/trail/candy.webp') },
+  { id: 'ice', name: 'Ice', price: 2500, image: require('@/assets/game/trail/ice.webp') },
+  { id: 'ember', name: 'Ember', price: 3000, image: require('@/assets/game/trail/ember.webp') },
+  { id: 'royal', name: 'Royal', price: 4000, image: require('@/assets/game/trail/royal.webp') },
 ];
 
 export const SKY_SKINS: readonly SkySkin[] = [
-  { id: 'day', name: 'Clear Day', price: 0, image: require('@/assets/game/sky/day.png') },
-  { id: 'sunset', name: 'Sunset', price: 500, image: require('@/assets/game/sky/sunset.png') },
-  { id: 'night', name: 'Night', price: 1000, image: require('@/assets/game/sky/night.png') },
-  { id: 'dawn', name: 'Dawn', price: 1500, image: require('@/assets/game/sky/dawn.png') },
-  { id: 'storm', name: 'Storm', price: 2000, image: require('@/assets/game/sky/storm.png') },
-  { id: 'aurora', name: 'Aurora', price: 2500, image: require('@/assets/game/sky/aurora.png') },
-  { id: 'nebula', name: 'Nebula', price: 3000, image: require('@/assets/game/sky/nebula.png') },
-  { id: 'cosmic', name: 'Cosmic Crest', price: 4000, image: require('@/assets/game/sky/cosmic.png') },
+  { id: 'day', name: 'Clear Day', price: 0, image: require('@/assets/game/sky/day.webp') },
+  { id: 'sunset', name: 'Sunset', price: 500, image: require('@/assets/game/sky/sunset.webp') },
+  { id: 'night', name: 'Night', price: 1000, image: require('@/assets/game/sky/night.webp') },
+  { id: 'dawn', name: 'Dawn', price: 1500, image: require('@/assets/game/sky/dawn.webp') },
+  { id: 'storm', name: 'Storm', price: 2000, image: require('@/assets/game/sky/storm.webp') },
+  { id: 'aurora', name: 'Aurora', price: 2500, image: require('@/assets/game/sky/aurora.webp') },
+  { id: 'nebula', name: 'Nebula', price: 3000, image: require('@/assets/game/sky/nebula.webp') },
+  { id: 'cosmic', name: 'Cosmic Crest', price: 4000, image: require('@/assets/game/sky/cosmic.webp') },
 ];
 
 export const DEFAULT_SKINS = {

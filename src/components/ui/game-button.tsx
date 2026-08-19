@@ -87,7 +87,7 @@ export function GameButton({
       {tone === 'default' ? (
         <View style={{ borderRadius: Radius.medium, overflow: 'hidden' }}>
           <Image
-            source={require('@/assets/game/ui/button-panel.png')}
+            source={require('@/assets/game/ui/button-panel.webp')}
             style={StyleSheet.absoluteFill}
             contentFit="fill"
           />
@@ -113,7 +113,7 @@ export function GameButton({
           }}>
           <View>
             <Image
-              source={require('@/assets/game/ui/metal-texture.png')}
+              source={require('@/assets/game/ui/metal-texture.webp')}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
             />

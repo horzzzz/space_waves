@@ -48,7 +48,7 @@ export function MetalPanel({ children, style, contentStyle }: Props) {
       ]}>
       <View style={styles.fill}>
         <Image
-          source={require('@/assets/game/ui/metal-texture.png')}
+          source={require('@/assets/game/ui/metal-texture.webp')}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
         />

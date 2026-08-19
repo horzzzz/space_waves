@@ -141,7 +141,7 @@ export default function TutorialScreen() {
       <SafeAreaView style={styles.top} pointerEvents="box-none" edges={['top']}>
         <View style={styles.headerRow} pointerEvents="box-none">
           <IconButton
-            icon={require('@/assets/game/icons/back.png')}
+            icon={require('@/assets/game/icons/back.webp')}
             accessibilityLabel="Go back"
             onPress={() => router.back()}
           />

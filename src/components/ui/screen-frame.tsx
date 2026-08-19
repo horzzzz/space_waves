@@ -40,7 +40,7 @@ export function ScreenFrame({ children, title, onBack, showBack = true, coins, c
           <View style={styles.topBarSide}>
             {showBack && (
               <IconButton
-                icon={require('@/assets/game/icons/back.png')}
+                icon={require('@/assets/game/icons/back.webp')}
                 accessibilityLabel="Go back"
                 onPress={handleBack}
               />

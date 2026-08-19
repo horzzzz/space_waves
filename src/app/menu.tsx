@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { openBrowserAsync } from 'expo-web-browser';
@@ -70,7 +70,7 @@ export default function MenuScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.topBar}>
           <IconButton
-            icon={require('@/assets/game/icons/settings.png')}
+            icon={require('@/assets/game/icons/settings.webp')}
             accessibilityLabel="Settings"
             onPress={() => setShowSettings(true)}
           />
@@ -88,25 +88,25 @@ export default function MenuScreen() {
 
           <View style={styles.tileRow}>
             <IconTile
-              icon={require('@/assets/game/ui/tile-wheel.png')}
+              icon={require('@/assets/game/ui/tile-wheel.webp')}
               label="Wheel of Fortune"
               onPress={() => router.push('/wheel')}
               badge={wheelReady}
             />
             <IconTile
-              icon={require('@/assets/game/ui/tile-daily-drop.png')}
+              icon={require('@/assets/game/ui/tile-daily-drop.webp')}
               label="Daily Drop"
               onPress={() => setShowDaily(true)}
               badge={dailyReady}
             />
             <IconTile
-              icon={require('@/assets/game/ui/tile-daily-missions.png')}
+              icon={require('@/assets/game/ui/tile-daily-missions.webp')}
               label="Daily Missions"
               onPress={() => setShowQuests(true)}
               badge={questsReady}
             />
             <IconTile
-              icon={require('@/assets/game/ui/tile-leaderboard.png')}
+              icon={require('@/assets/game/ui/tile-leaderboard.webp')}
               label="Leaderboard"
               onPress={() => router.push('/leaderboard')}
             />
@@ -134,7 +134,7 @@ export default function MenuScreen() {
       <GameDialog visible={showDaily} title="Daily Bonus!" onClose={() => setShowDaily(false)}>
         <View style={styles.dialogBody}>
           <Image
-            source={require('@/assets/game/ui/chest.png')}
+            source={require('@/assets/game/ui/chest.webp')}
             style={styles.chest}
             contentFit="contain"
           />

@@ -174,7 +174,7 @@ export default function GameScreen() {
       <SafeAreaView style={styles.hud} pointerEvents="box-none" edges={['top']}>
         <View style={styles.hudBar} pointerEvents="box-none">
           <IconButton
-            icon={require('@/assets/game/icons/pause.png')}
+            icon={require('@/assets/game/icons/pause.webp')}
             accessibilityLabel="Pause"
             onPress={handlePause}
           />
@@ -208,7 +208,7 @@ export default function GameScreen() {
       <GameDialog visible={phase === 'won'} title="You Win!" dismissable={false}>
         <View style={styles.dialogBody}>
           <Image
-            source={require('@/assets/game/scenes/level-complete.png')}
+            source={require('@/assets/game/scenes/level-complete.webp')}
             style={styles.sceneArt}
             contentFit="contain"
           />
@@ -233,7 +233,7 @@ export default function GameScreen() {
 
       <GameDialog visible={phase === 'crashed'} title="You Crashed" dismissable={false}>
         <View style={styles.dialogBody}>
-          <Image source={require('@/assets/game/scenes/crash.png')} style={styles.sceneArt} contentFit="contain" />
+          <Image source={require('@/assets/game/scenes/crash.webp')} style={styles.sceneArt} contentFit="contain" />
           <GameButton label="Restart" onPress={restart} />
           <GameButton label="Main Menu" onPress={goToMenu} />
         </View>
