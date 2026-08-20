@@ -36,6 +36,7 @@
     "plugins": [
       "expo-router",
       "expo-audio",
+      ["expo-navigation-bar", { "hidden": true }],
       [
         "expo-splash-screen",
         {

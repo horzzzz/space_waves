@@ -1,5 +1,6 @@
 import { PoetsenOne_400Regular } from '@expo-google-fonts/poetsen-one';
 import { useFonts } from 'expo-font';
+import { NavigationBar } from 'expo-navigation-bar';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -34,6 +35,7 @@ export default function RootLayout() {
     initAnalytics();
     initAds();
     void initAudio();
+    NavigationBar.setHidden(true);
   }, []);
 
   useEffect(() => {
