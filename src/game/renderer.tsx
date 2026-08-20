@@ -24,7 +24,7 @@ import {
   type SkImage,
   type SkPoint,
 } from '@shopify/react-native-skia';
-import { useDerivedValue, type SharedValue } from 'react-native-reanimated';
+import { useDerivedValue, useSharedValue, type SharedValue } from 'react-native-reanimated';
 
 import { SHIP_RADIUS, SHIP_SCREEN_X, type WaveEngine } from '@/game/engine';
 import { COIN_RADIUS, SEGMENT_WIDTH, type Coin, type Level, type Obstacle } from '@/game/levels';
@@ -40,7 +40,27 @@ type Props = {
   sky: SkySkin;
   /** 0→1 over the finish flourish; spins/shrinks/fades the ship into the portal. */
   outroT: SharedValue<number>;
+  /** Screen-space center of the HUD coin counter — where a picked-up coin flies to.
+   *  Optional because the tutorial mounts this renderer too and has no coins
+   *  (`tutorial.ts`) nor a counter; it falls back to the top-right corner. */
+  coinTargetX?: SharedValue<number>;
+  coinTargetY?: SharedValue<number>;
 };
+
+/** Pickup flourish: how long the coin pops and flips in place before it takes off. */
+export const COIN_POP_MS = 260;
+/** …and how long the flight from there into the HUD counter takes. */
+export const COIN_FLY_MS = 460;
+/** Total time from touching a coin to it landing in the counter. */
+export const COIN_FX_MS = COIN_POP_MS + COIN_FLY_MS;
+
+/** How high the pop lifts the coin, in coin radii. */
+const COIN_POP_RISE = 1.6;
+/** Horizontal squash at the coin's edge-on moment. Never 0, or the transform
+ *  collapses the sprite to a degenerate zero-width matrix. */
+const COIN_FLIP_MIN = 0.12;
+/** How long the pickup's expanding ring flash lasts. */
+const COIN_RING_MS = 220;
 
 /** Parallax clouds are laid out once per level from a fixed pattern. */
 const CLOUD_PATTERN = [
@@ -57,8 +77,23 @@ const CLOUD_PARALLAX = 0.35;
 /** Size of one stone tile, in px — roughly ~6x SEGMENT_WIDTH. */
 const WALL_TILE_SIZE = 220;
 
-export function GameRenderer({ engine, level, width, height, plane, trail, sky, outroT }: Props) {
-  const { shipX, shipY, shipVY, trailX, trailY, elapsed, coinCursor } = engine;
+export function GameRenderer({
+  engine,
+  level,
+  width,
+  height,
+  plane,
+  trail,
+  sky,
+  outroT,
+  coinTargetX,
+  coinTargetY,
+}: Props) {
+  const { shipX, shipY, shipVY, trailX, trailY, elapsed, coinCursor, coinFxX, coinFxY, coinFxAt } = engine;
+
+  // Stand-ins for a screen without a coin counter (see the props above).
+  const fallbackCoinTargetX = useSharedValue(width - 64);
+  const fallbackCoinTargetY = useSharedValue(64);
 
   const shipRadiusPx = SHIP_RADIUS * height;
   const shipScreenX = width * SHIP_SCREEN_X;
@@ -228,6 +263,19 @@ export function GameRenderer({ engine, level, width, height, plane, trail, sky, 
           />
         )}
       </Group>
+
+      {/* Pickup flourish, drawn last so a collected coin flies over everything. */}
+      <CollectedCoinFx
+        coinFxX={coinFxX}
+        coinFxY={coinFxY}
+        coinFxAt={coinFxAt}
+        elapsed={elapsed}
+        cameraX={cameraX}
+        targetX={coinTargetX ?? fallbackCoinTargetX}
+        targetY={coinTargetY ?? fallbackCoinTargetY}
+        height={height}
+        radiusPx={COIN_RADIUS * height}
+      />
     </Canvas>
   );
 }
@@ -475,14 +523,12 @@ type CoinSpriteProps = {
 };
 
 /**
- * Placeholder coin visual (gold gradient disc, same language as the wallet's
- * `CoinIcon`) until real Figma art replaces it. Hidden once the engine's
- * cursor has moved past this coin's index, since resolution is strictly
- * forward-moving just like the obstacle cursor.
+ * One coin sitting on the course. Hidden once the engine's cursor has moved past
+ * this coin's index, since resolution is strictly forward-moving just like the
+ * obstacle cursor — and when that index was *collected* rather than missed,
+ * `CollectedCoinFx` picks the coin up from this exact spot in the same frame.
  */
 function CoinSprite({ coin, index, cameraX, coinCursor, height }: CoinSpriteProps) {
-  const radiusPx = COIN_RADIUS * height;
-
   const transform = useDerivedValue(() => [
     { translateX: coin.x - cameraX.value },
     { translateY: coin.y * height },
@@ -492,6 +538,20 @@ function CoinSprite({ coin, index, cameraX, coinCursor, height }: CoinSpriteProp
 
   return (
     <Group transform={transform} opacity={opacity}>
+      <CoinDisc radiusPx={COIN_RADIUS * height} />
+    </Group>
+  );
+}
+
+/**
+ * The coin's own art, drawn around the origin — a placeholder gold gradient disc
+ * (same language as the wallet's `CoinIcon`) until real Figma art replaces it.
+ * Shared by the coins lying on the course and by the pickup flourish, so the coin
+ * that flies to the HUD is visibly the same object that was just sitting there.
+ */
+function CoinDisc({ radiusPx }: { radiusPx: number }) {
+  return (
+    <Group>
       <Circle cx={0} cy={0} r={radiusPx}>
         <LinearGradient
           start={vec(-radiusPx, -radiusPx)}
@@ -500,6 +560,133 @@ function CoinSprite({ coin, index, cameraX, coinCursor, height }: CoinSpriteProp
         />
       </Circle>
       <Circle cx={0} cy={0} r={radiusPx} style="stroke" strokeWidth={radiusPx * 0.18} color="rgba(255,255,255,0.55)" />
+    </Group>
+  );
+}
+
+type CollectedCoinFxProps = {
+  coinFxX: SharedValue<number>;
+  coinFxY: SharedValue<number>;
+  coinFxAt: SharedValue<number>;
+  elapsed: SharedValue<number>;
+  cameraX: SharedValue<number>;
+  targetX: SharedValue<number>;
+  targetY: SharedValue<number>;
+  height: number;
+  radiusPx: number;
+};
+
+/**
+ * What a picked-up coin does after `CoinSprite` blinks out: it pops up, flips a
+ * couple of times with a ring flash (`COIN_POP_MS`), then arcs into the HUD
+ * counter, shrinking and spinning faster (`COIN_FLY_MS`).
+ *
+ * One instance covers every coin in the level rather than one per pickup: the
+ * engine hands over only the *latest* pickup, and coins sit ~2.3s apart even on
+ * the fastest course, so two flourishes can never be in the air at once.
+ *
+ * The clock is the engine's own `elapsed`, which only advances while the run is
+ * RUNNING — so the flourish freezes on pause and resumes with the game for free.
+ * Reading it also re-evaluates this every frame, which is what keeps the
+ * world-anchored source point below tracking the camera.
+ */
+function CollectedCoinFx({
+  coinFxX,
+  coinFxY,
+  coinFxAt,
+  elapsed,
+  cameraX,
+  targetX,
+  targetY,
+  height,
+  radiusPx,
+}: CollectedCoinFxProps) {
+  const fx = useDerivedValue(() => {
+    'worklet';
+    const ms = coinFxAt.value < 0 ? -1 : (elapsed.value - coinFxAt.value) * 1000;
+    if (ms < 0 || ms > COIN_FX_MS) {
+      return { x: 0, y: 0, scale: 1, flip: 1, opacity: 0, ringX: 0, ringY: 0, ringRadius: 0, ringOpacity: 0 };
+    }
+
+    // The source stays pinned to the world, so the flourish drifts backwards with
+    // the scene it came out of instead of hanging in place on screen.
+    const sourceX = coinFxX.value - cameraX.value;
+    const sourceY = coinFxY.value * height;
+    const flipAt = (angle: number) => COIN_FLIP_MIN + (1 - COIN_FLIP_MIN) * Math.abs(Math.cos(angle));
+
+    if (ms < COIN_POP_MS) {
+      const p = ms / COIN_POP_MS;
+      // Ease out: the pop is fastest at the very start, like a real snatch.
+      const ease = 1 - (1 - p) * (1 - p);
+      const ring = Math.min(1, ms / COIN_RING_MS);
+      return {
+        x: sourceX,
+        y: sourceY - radiusPx * COIN_POP_RISE * ease,
+        scale: 1 + 0.5 * ease,
+        flip: flipAt(p * Math.PI * 2),
+        opacity: 1,
+        // The flash stays put at the spot the coin was snatched from while the
+        // coin itself rises out of it.
+        ringX: sourceX,
+        ringY: sourceY,
+        ringRadius: radiusPx * (0.9 + 1.7 * ring),
+        ringOpacity: 1 - ring,
+      };
+    }
+
+    const q = (ms - COIN_POP_MS) / COIN_FLY_MS;
+    // Ease in: hangs at the pickup point for a beat, then snaps into the counter.
+    const e = q * q;
+    const fromX = sourceX;
+    const fromY = sourceY - radiusPx * COIN_POP_RISE;
+    const toX = targetX.value;
+    const toY = targetY.value;
+    // Quadratic Bézier through a control point above the pickup: the coin arcs up
+    // out of the corridor first instead of cutting a straight line to the HUD.
+    const controlX = fromX + (toX - fromX) * 0.15;
+    const controlY = fromY - height * 0.12;
+    const inv = 1 - e;
+    return {
+      x: inv * inv * fromX + 2 * inv * e * controlX + e * e * toX,
+      y: inv * inv * fromY + 2 * inv * e * controlY + e * e * toY,
+      scale: 1.5 - e,
+      flip: flipAt(Math.PI * 2 + q * Math.PI * 4),
+      opacity: 1 - Math.max(0, q - 0.85) / 0.15,
+      ringX: 0,
+      ringY: 0,
+      ringRadius: 0,
+      ringOpacity: 0,
+    };
+  });
+
+  const coinTransform = useDerivedValue(() => [
+    { translateX: fx.value.x },
+    { translateY: fx.value.y },
+    { scale: fx.value.scale },
+    // Squashing x last turns the uniform disc edge-on: the classic 2D coin spin.
+    { scaleX: fx.value.flip },
+  ]);
+  const coinOpacity = useDerivedValue(() => fx.value.opacity);
+  // The ring only translates — its growth is its own radius, not the coin's scale.
+  const ringTransform = useDerivedValue(() => [{ translateX: fx.value.ringX }, { translateY: fx.value.ringY }]);
+  const ringRadius = useDerivedValue(() => fx.value.ringRadius);
+  const ringOpacity = useDerivedValue(() => fx.value.ringOpacity);
+
+  return (
+    <Group>
+      <Group transform={ringTransform} opacity={ringOpacity}>
+        <Circle
+          cx={0}
+          cy={0}
+          r={ringRadius}
+          style="stroke"
+          strokeWidth={radiusPx * 0.22}
+          color="rgba(255,233,168,0.9)"
+        />
+      </Group>
+      <Group transform={coinTransform} opacity={coinOpacity}>
+        <CoinDisc radiusPx={radiusPx} />
+      </Group>
     </Group>
   );
 }

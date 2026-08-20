@@ -84,6 +84,12 @@ export type WaveEngine = {
   coinsCollected: SharedValue<number>;
   /** Index of the first coin not yet resolved (collected or passed) — renderer uses this to hide resolved coins. */
   coinCursor: SharedValue<number>;
+  /** Where and when the most recent coin was picked up, so the renderer can play
+   *  its collect → fly-to-HUD flourish from the exact spot it vanished from:
+   *  world x, normalized y, and the `elapsed` stamp (-1 = nothing picked up yet). */
+  coinFxX: SharedValue<number>;
+  coinFxY: SharedValue<number>;
+  coinFxAt: SharedValue<number>;
   start: () => void;
   reset: () => void;
   pause: () => void;
@@ -114,6 +120,9 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
   const obstacleCursor = useSharedValue(0);
   const checkpointCursor = useSharedValue(0);
   const coinCursor = useSharedValue(0);
+  const coinFxX = useSharedValue(0);
+  const coinFxY = useSharedValue(0);
+  const coinFxAt = useSharedValue(-1);
 
   // Flatten the level into plain number arrays so the worklet closure stays cheap
   // to serialize onto the UI runtime.
@@ -291,6 +300,11 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
       const reach = COIN_RADIUS + SHIP_RADIUS;
       if (dx * dx + dy * dy < reach * reach) {
         coinsCollected.value += 1;
+        // Hand the renderer the spot this coin vanished from, so its pickup
+        // flourish starts exactly where the sprite was.
+        coinFxX.value = coinXPx;
+        coinFxY.value = geometry.coinY[coinIdx];
+        coinFxAt.value = elapsed.value;
         if (onCoin) runOnJS(onCoin)();
         coinIdx += 1;
       } else if (coinXPx < nextX - 60) {
@@ -315,6 +329,7 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     checkpointCursor.value = 0;
     coinCursor.value = 0;
     coinsCollected.value = 0;
+    coinFxAt.value = -1;
     status.value = STATUS_READY;
   }, [
     level,
@@ -329,6 +344,7 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     checkpointCursor,
     coinCursor,
     coinsCollected,
+    coinFxAt,
     status,
   ]);
 
@@ -370,9 +386,23 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
         coinCursorAt += 1;
       }
       coinCursor.value = coinCursorAt;
+      coinFxAt.value = -1;
       status.value = STATUS_PAUSED;
     },
-    [shipX, shipY, shipVY, trailX, trailY, holding, obstacleCursor, checkpointCursor, coinCursor, status, geometry]
+    [
+      shipX,
+      shipY,
+      shipVY,
+      trailX,
+      trailY,
+      holding,
+      obstacleCursor,
+      checkpointCursor,
+      coinCursor,
+      coinFxAt,
+      status,
+      geometry,
+    ]
   );
 
   return {
@@ -386,6 +416,9 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     elapsed,
     coinsCollected,
     coinCursor,
+    coinFxX,
+    coinFxY,
+    coinFxAt,
     start,
     reset,
     pause,

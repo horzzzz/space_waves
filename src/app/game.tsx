@@ -1,9 +1,16 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Easing, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { BoostReward } from '@/components/game/boost-reward';
 import { CoinBadge, CoinIcon } from '@/components/ui/coin-badge';
@@ -14,7 +21,7 @@ import { InkPlate } from '@/components/ui/metal-panel';
 import { Palette, Radius, Spacing, Type } from '@/constants/theme';
 import { FINISH_OUTRO_MS, useWaveEngine } from '@/game/engine';
 import { getLevel, rewardForLevel, starsForRun, TOTAL_COINS_PER_LEVEL, TOTAL_LEVELS } from '@/game/levels';
-import { GameRenderer } from '@/game/renderer';
+import { COIN_FX_MS, GameRenderer } from '@/game/renderer';
 import { getPlaneSkin, getSkySkin, getTrailSkin } from '@/game/skins';
 import { adsEnabled } from '@/services/ads';
 import { reportGame } from '@/services/analytics';
@@ -35,8 +42,18 @@ export default function GameScreen() {
   const [phase, setPhase] = useState<Phase>('ready');
   /** 0→1 over the finish flourish; drives the ship's spin/shrink/fade into the portal. */
   const outroT = useSharedValue(0);
-  /** Live HUD count, mirrored from the engine's shared value on each pickup. */
+  /** Live HUD count, mirrored from the engine's shared value — but only once the
+   *  picked-up coin has finished flying into the counter (see `handleCoin`). */
   const [coinsCollected, setCoinsCollected] = useState(0);
+  /** 0→1→0 kick the counter gives when a coin lands in it. */
+  const hudBump = useSharedValue(0);
+  /** Pending "coin landed" increments, so a restart can cancel them mid-flight. */
+  const coinTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  /** Center of the coin counter in screen px — the flying coin's destination.
+   *  Seeded with the counter's nominal spot and refined once it has laid out. */
+  const coinTargetX = useSharedValue(width - 64);
+  const coinTargetY = useSharedValue(64);
+  const counterRef = useRef<View>(null);
 
   const plane = getPlaneSkin(save.selectedSkins.plane);
   const trail = getTrailSkin(save.selectedSkins.trail);
@@ -61,11 +78,33 @@ export default function GameScreen() {
     setTimeout(() => setPhase('won'), FINISH_OUTRO_MS);
   }, [outroT]);
 
+  const clearCoinTimers = useCallback(() => {
+    coinTimers.current.forEach(clearTimeout);
+    coinTimers.current = [];
+  }, []);
+
   const handleCoin = useCallback(() => {
-    setCoinsCollected((count) => count + 1);
     playSfx('tap');
     vibrate('light');
-  }, []);
+    // The renderer plays the pickup pop and then flies the coin up here, so the
+    // number and the counter's kick both wait until it actually lands. Only the
+    // display waits — the run's real tally is the engine's `coinsCollected`.
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared-value mutation, not React state (see engine.ts header)
+    hudBump.value = withDelay(
+      COIN_FX_MS,
+      withSequence(withTiming(1, { duration: 120 }), withTiming(0, { duration: 160 }))
+    );
+    coinTimers.current.push(setTimeout(() => setCoinsCollected((count) => count + 1), COIN_FX_MS));
+  }, [hudBump]);
+
+  /** Measured in window space, which is also canvas space: the game screen is
+   *  full-bleed (no header, hidden status bar — see `_layout.tsx`). */
+  const measureCoinTarget = useCallback(() => {
+    counterRef.current?.measureInWindow((x, y, coinWidth, coinHeight) => {
+      coinTargetX.value = x + coinWidth / 2;
+      coinTargetY.value = y + coinHeight / 2;
+    });
+  }, [coinTargetX, coinTargetY]);
 
   const callbacks = useMemo(
     () => ({ onCrash: handleCrash, onWin: handleWin, onCoin: handleCoin }),
@@ -95,13 +134,18 @@ export default function GameScreen() {
     return () => stopMusic();
   }, []);
 
+  useEffect(() => clearCoinTimers, [clearCoinTimers]);
+
   const restart = useCallback(() => {
     engine.reset();
-    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared-value mutation, not React state (see engine.ts header)
+    clearCoinTimers();
+    /* eslint-disable react-hooks/immutability -- Reanimated shared-value mutation, not React state (see engine.ts header) */
     outroT.value = 0;
+    hudBump.value = 0;
+    /* eslint-enable react-hooks/immutability */
     setCoinsCollected(0);
     setPhase('ready');
-  }, [engine, outroT]);
+  }, [engine, outroT, hudBump, clearCoinTimers]);
 
   // Restart cleanly whenever the level changes (e.g. Next Level).
   useEffect(() => {
@@ -147,6 +191,8 @@ export default function GameScreen() {
 
   const settleReward = (amount: number) => addCoins(amount);
 
+  const counterStyle = useAnimatedStyle(() => ({ transform: [{ scale: 1 + hudBump.value * 0.18 }] }));
+
   const isOverlayOpen = phase === 'paused' || phase === 'finishing' || phase === 'won' || phase === 'crashed';
 
   return (
@@ -160,6 +206,8 @@ export default function GameScreen() {
         trail={trail}
         sky={sky}
         outroT={outroT}
+        coinTargetX={coinTargetX}
+        coinTargetY={coinTargetY}
       />
 
       {/* Control surface: hold to climb, release to dive. */}
@@ -180,11 +228,15 @@ export default function GameScreen() {
           />
           <View style={styles.spacer} />
           {(phase === 'ready' || phase === 'playing' || phase === 'paused') && (
-            <View style={styles.coinCounter}>
-              <CoinIcon size={16} />
-              <Text style={styles.coinCounterText}>
-                {coinsCollected}/{TOTAL_COINS_PER_LEVEL}
-              </Text>
+            /* The plain wrapper is what gets measured: it keeps a stable frame
+               while the inner view scales, and measures reliably as a host view. */
+            <View ref={counterRef} onLayout={measureCoinTarget}>
+              <Animated.View style={[styles.coinCounter, counterStyle]}>
+                <CoinIcon size={16} />
+                <Text style={styles.coinCounterText}>
+                  {coinsCollected}/{TOTAL_COINS_PER_LEVEL}
+                </Text>
+              </Animated.View>
             </View>
           )}
         </View>

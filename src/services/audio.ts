@@ -41,6 +41,27 @@ export async function initAudio() {
   } catch {
     // Audio session setup is best effort; play should continue regardless.
   }
+  preloadSfx();
+}
+
+/**
+ * Eagerly creates every sfx player up front, at app start, instead of leaving
+ * `playSfx` to create (and natively decode) each one on its first use. Without
+ * this, whichever sound effect happens to play first in a session — often a
+ * gameplay hit like the coin pickup `tap` — pays that decode cost as a visible
+ * mid-game hitch instead of an invisible one during the splash/menu.
+ */
+function preloadSfx() {
+  (Object.keys(SOURCES) as (MusicTrack | SfxName)[]).forEach((name) => {
+    if (name === 'menu' || name === 'game') return;
+    const sfxName = name as SfxName;
+    if (sfxPlayers.has(sfxName)) return;
+    const source = SOURCES[sfxName];
+    if (!source) return;
+    const player = createAudioPlayer(source);
+    player.volume = SFX_VOLUME;
+    sfxPlayers.set(sfxName, player);
+  });
 }
 
 /** Mirrors the settings toggles into the audio layer. */
