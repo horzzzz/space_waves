@@ -45,6 +45,10 @@ export const SHIP_SCREEN_X = 0.3;
  */
 const TRAIL_WORLD_SPAN = 500;
 
+/** Max perpendicular deviation (px) a trail point may have from the line through
+ *  its neighbors before it's kept as a real corner instead of collapsed away. */
+const COLLINEAR_EPS_PX = 0.05;
+
 /** How long the spin-into-the-portal flourish plays before the win dialog appears. */
 export const FINISH_OUTRO_MS = 850;
 
@@ -201,17 +205,54 @@ export function useWaveEngine(level: Level, playHeight: number, callbacks: Callb
     shipVY.value = (nextY - prevY) / dt;
 
     // --- Trail history --------------------------------------------------------
+    // Store corners, not samples: collapse the point just pushed into its segment
+    // when it's collinear with its neighbors (checked in the same px space the
+    // renderer draws in, via playHeight). Without this the history is ~120 points
+    // ~10px apart on a ~25px-wide ribbon, which is too dense for TrailRibbon's
+    // miter joins to have anywhere to go — this keeps every real corner (still
+    // exact, never smoothed away) while turning the ~10px steps between them into
+    // long straight legs a miter can actually work with.
     const trailXs = trailX.value;
     const trailYs = trailY.value;
     trailXs.push(nextX);
     trailYs.push(nextY);
+    while (trailXs.length >= 3) {
+      const last = trailXs.length - 1;
+      const ax = trailXs[last - 2];
+      const ay = trailYs[last - 2] * playHeight;
+      const bx = trailXs[last - 1];
+      const by = trailYs[last - 1] * playHeight;
+      const cx = trailXs[last];
+      const cy = trailYs[last] * playHeight;
+      const vx = cx - ax;
+      const vy = cy - ay;
+      const segLen = Math.sqrt(vx * vx + vy * vy);
+      if (segLen < 1e-6) break;
+      // Perpendicular distance of the middle point from the a→c line.
+      const dist = Math.abs((bx - ax) * vy - (by - ay) * vx) / segLen;
+      if (dist > COLLINEAR_EPS_PX) break;
+      trailXs.splice(last - 1, 1);
+      trailYs.splice(last - 1, 1);
+    }
+
+    // Trim history past TRAIL_WORLD_SPAN, but clip the new oldest point exactly to
+    // the span boundary (via interpolation) instead of just dropping it — corners
+    // are now up to ~170px apart, so a plain drop would yank a whole leg out at
+    // once and jump the texture's cumulative-length mapping in TrailRibbon.
+    const trailFloor = nextX - TRAIL_WORLD_SPAN;
     let dropCount = 0;
-    while (dropCount < trailXs.length - 1 && trailXs[dropCount] < nextX - TRAIL_WORLD_SPAN) {
+    while (dropCount < trailXs.length - 2 && trailXs[dropCount + 1] <= trailFloor) {
       dropCount += 1;
     }
     if (dropCount > 0) {
       trailXs.splice(0, dropCount);
       trailYs.splice(0, dropCount);
+    }
+    if (trailXs.length >= 2 && trailXs[0] < trailFloor) {
+      const span = trailXs[1] - trailXs[0];
+      const t = span > 1e-6 ? (trailFloor - trailXs[0]) / span : 0;
+      trailYs[0] = trailYs[0] + (trailYs[1] - trailYs[0]) * t;
+      trailXs[0] = trailFloor;
     }
 
     // --- Obstacles ----------------------------------------------------------

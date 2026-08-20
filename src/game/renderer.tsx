@@ -241,6 +241,12 @@ type TrailRibbonProps = {
   image: SkImage;
 };
 
+/** Above this miter ratio (how many ribbon-widths the joint would need to
+ *  extend along the legs) the corner switches from a true point to a bevel —
+ *  in practice the ship's fixed ±climbRate turn angle never gets close to this,
+ *  so every real in-game corner is drawn as an exact miter, never a bevel. */
+const TRAIL_MITER_LIMIT = 4;
+
 /**
  * The ship's actual path, retraced as a ribbon mesh and textured with the
  * trail skin's own art stretched along it — the *entire* source image maps
@@ -248,6 +254,21 @@ type TrailRibbonProps = {
  * the oldest point, bright/pointed end at the ship), rather than tiling it
  * repeatedly, so the art's own built-in fade reads correctly no matter how
  * the path bends.
+ *
+ * `engine.ts` now hands this only real corners (collinear points collapsed
+ * away), so each joint below is a genuine, usually-sharp angle rather than a
+ * ~10px wobble — the naive "average the two neighboring directions" normal
+ * the previous version used can't correctly join a wide ribbon at a sharp
+ * angle: at the actual turn angles this course produces, it left the joint
+ * both underextended (a visible neck) *and* self-overlapping on the inside
+ * of the turn (a visible tear), because two independently-offset points share
+ * no vertex there for the strip to pivot on. Each interior point below instead
+ * gets a proper line-join: the inside of the turn is a single shared vertex
+ * (the exact intersection of the two segments' inner edges, so nothing
+ * overlaps), and the outside is either one true miter point — extended just
+ * far enough along the bisector to meet both segments' outer edges exactly —
+ * or, only if that extension would eat more than half of the shorter leg or
+ * exceed `TRAIL_MITER_LIMIT`, a two-point bevel across the corner instead.
  */
 function TrailRibbon({ trailX, trailY, cameraX, height, radiusPx, image }: TrailRibbonProps) {
   const imageW = image.width();
@@ -262,41 +283,106 @@ function TrailRibbon({ trailX, trailY, cameraX, height, radiusPx, image }: Trail
 
     const sx = new Array<number>(n);
     const sy = new Array<number>(n);
-    const cumLen = new Array<number>(n);
-    cumLen[0] = 0;
     for (let i = 0; i < n; i += 1) {
       sx[i] = xs[i] - cameraX.value;
       sy[i] = ys[i] * height;
-      if (i > 0) {
-        const dx = sx[i] - sx[i - 1];
-        const dy = sy[i] - sy[i - 1];
-        cumLen[i] = cumLen[i - 1] + Math.sqrt(dx * dx + dy * dy);
-      }
+    }
+
+    // Unit tangent, length, and cumulative arc length of each segment i → i+1.
+    const segLen = new Array<number>(n - 1);
+    const tanX = new Array<number>(n - 1);
+    const tanY = new Array<number>(n - 1);
+    const cumLen = new Array<number>(n);
+    cumLen[0] = 0;
+    for (let i = 0; i < n - 1; i += 1) {
+      const dx = sx[i + 1] - sx[i];
+      const dy = sy[i + 1] - sy[i];
+      const len = Math.sqrt(dx * dx + dy * dy) || 1e-6;
+      segLen[i] = len;
+      tanX[i] = dx / len;
+      tanY[i] = dy / len;
+      cumLen[i + 1] = cumLen[i] + len;
     }
     const totalLen = cumLen[n - 1];
     if (totalLen <= 0) return { vertices: [] as SkPoint[], textures: [] as SkPoint[] };
 
-    const vertices: SkPoint[] = new Array(n * 2);
-    const textures: SkPoint[] = new Array(n * 2);
+    const vertices: SkPoint[] = [];
+    const textures: SkPoint[] = [];
+    const pushPair = (ax: number, ay: number, bx: number, by: number, u: number) => {
+      vertices.push({ x: ax, y: ay });
+      textures.push({ x: u, y: 0 });
+      vertices.push({ x: bx, y: by });
+      textures.push({ x: u, y: imageH });
+    };
 
-    for (let i = 0; i < n; i += 1) {
-      const prev = i > 0 ? i - 1 : i;
-      const next = i < n - 1 ? i + 1 : i;
-      let tx = sx[next] - sx[prev];
-      let ty = sy[next] - sy[prev];
-      const len = Math.sqrt(tx * tx + ty * ty) || 1;
-      tx /= len;
-      ty /= len;
-      // Perpendicular normal, rotated 90° from the tangent.
-      const nx = -ty * radiusPx;
-      const ny = tx * radiusPx;
+    // Start cap: square across the first segment's own normal.
+    const startNx = -tanY[0] * radiusPx;
+    const startNy = tanX[0] * radiusPx;
+    pushPair(sx[0] + startNx, sy[0] + startNy, sx[0] - startNx, sy[0] - startNy, 0);
 
+    for (let i = 1; i < n - 1; i += 1) {
+      const t1x = tanX[i - 1];
+      const t1y = tanY[i - 1];
+      const t2x = tanX[i];
+      const t2y = tanY[i];
+      // Perpendicular normal, rotated 90° from each tangent.
+      const n1x = -t1y;
+      const n1y = t1x;
+      const n2x = -t2y;
+      const n2y = t2x;
       const u = (cumLen[i] / totalLen) * imageW;
-      vertices[i * 2] = { x: sx[i] + nx, y: sy[i] + ny };
-      vertices[i * 2 + 1] = { x: sx[i] - nx, y: sy[i] - ny };
-      textures[i * 2] = { x: u, y: 0 };
-      textures[i * 2 + 1] = { x: u, y: imageH };
+
+      let mx = n1x + n2x;
+      let my = n1y + n2y;
+      const mLen = Math.sqrt(mx * mx + my * my);
+      if (mLen < 1e-6) {
+        // Ship reversed direction almost exactly (~180°): no well-defined miter
+        // bisector, so just bevel across both segments' own normals.
+        pushPair(sx[i] + n1x * radiusPx, sy[i] + n1y * radiusPx, sx[i] - n1x * radiusPx, sy[i] - n1y * radiusPx, u);
+        pushPair(sx[i] + n2x * radiusPx, sy[i] + n2y * radiusPx, sx[i] - n2x * radiusPx, sy[i] - n2y * radiusPx, u);
+        continue;
+      }
+      mx /= mLen;
+      my /= mLen;
+      // How far the miter point sits from the corner, along the bisector, to
+      // exactly meet both segments' offset edges.
+      const cosHalfAngle = mx * n1x + my * n1y;
+      const miterFactor = 1 / Math.max(cosHalfAngle, 1e-3);
+      // That same extension measured along the legs themselves — clamp it to
+      // half of whichever leg is shorter so a joint can never reach past the
+      // *next* joint and tear the strip open there instead.
+      const reachAlongLeg = radiusPx * Math.sqrt(Math.max(miterFactor * miterFactor - 1, 0));
+      const room = Math.min(segLen[i - 1], segLen[i]) * 0.5;
+      const scale = reachAlongLeg <= room ? 1 : room / reachAlongLeg;
+      const miterLen = radiusPx * miterFactor * scale;
+      // Sign of the turn: which side of the path is the inside of the corner.
+      const cross = t1x * t2y - t1y * t2x;
+
+      const miterPx = sx[i] + mx * miterLen;
+      const miterPy = sy[i] + my * miterLen;
+      const innerPx = sx[i] - mx * miterLen;
+      const innerPy = sy[i] - my * miterLen;
+
+      if (miterFactor <= TRAIL_MITER_LIMIT && scale === 1) {
+        // True sharp corner: one vertex pair, exactly on both segments' edges.
+        pushPair(miterPx, miterPy, innerPx, innerPy, u);
+      } else if (cross < 0) {
+        // Outside of the turn is the +normal side: bevel it across two
+        // vertices, but keep the inside pinned to the single shared point so
+        // the strip can't fold over itself there.
+        pushPair(sx[i] + n1x * radiusPx, sy[i] + n1y * radiusPx, innerPx, innerPy, u);
+        pushPair(sx[i] + n2x * radiusPx, sy[i] + n2y * radiusPx, innerPx, innerPy, u);
+      } else {
+        pushPair(miterPx, miterPy, sx[i] - n1x * radiusPx, sy[i] - n1y * radiusPx, u);
+        pushPair(miterPx, miterPy, sx[i] - n2x * radiusPx, sy[i] - n2y * radiusPx, u);
+      }
     }
+
+    // End cap: square across the last segment's own normal, right at the ship.
+    const last = n - 1;
+    const endNx = -tanY[last - 1] * radiusPx;
+    const endNy = tanX[last - 1] * radiusPx;
+    pushPair(sx[last] + endNx, sy[last] + endNy, sx[last] - endNx, sy[last] - endNy, imageW);
 
     return { vertices, textures };
   });
