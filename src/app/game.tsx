@@ -221,11 +221,13 @@ export default function GameScreen() {
 
       <SafeAreaView style={styles.hud} pointerEvents="box-none" edges={['top']}>
         <View style={styles.hudBar} pointerEvents="box-none">
-          <IconButton
-            icon={require('@/assets/game/icons/pause.webp')}
-            accessibilityLabel="Pause"
-            onPress={handlePause}
-          />
+          {phase === 'playing' && (
+            <IconButton
+              icon={require('@/assets/game/icons/pause.webp')}
+              accessibilityLabel="Pause"
+              onPress={handlePause}
+            />
+          )}
           <View style={styles.spacer} />
           {(phase === 'ready' || phase === 'playing' || phase === 'paused') && (
             /* The plain wrapper is what gets measured: it keeps a stable frame

@@ -81,6 +81,19 @@ export function applyAudioSettings(settings: {
   }
 }
 
+/**
+ * Fully releases the native player and clears the module's music state.
+ * Pausing first guarantees the track goes silent immediately — `remove()`
+ * alone can let native teardown lag behind, leaving it audibly overlapping
+ * whatever plays next.
+ */
+function teardownMusic() {
+  musicPlayer?.pause();
+  musicPlayer?.remove();
+  musicPlayer = null;
+  currentTrack = null;
+}
+
 export function playMusic(track: MusicTrack) {
   const source = SOURCES[track];
   if (!source) return;
@@ -89,7 +102,7 @@ export function playMusic(track: MusicTrack) {
     return;
   }
 
-  musicPlayer?.remove();
+  teardownMusic();
   musicPlayer = createAudioPlayer(source);
   musicPlayer.loop = true;
   musicPlayer.volume = MUSIC_VOLUME;
@@ -98,8 +111,17 @@ export function playMusic(track: MusicTrack) {
 }
 
 export function stopMusic() {
-  musicPlayer?.pause();
-  currentTrack = null;
+  teardownMusic();
+}
+
+// Fast Refresh keeps this module's state alive across edits to other files, but
+// a native AudioPlayer created before the refresh can outlive the JS reference
+// to it, leaving it playing while a new player is created on top of it. Releasing
+// it right before the module is swapped keeps at most one music player alive.
+if (__DEV__ && (module as unknown as { hot?: { dispose: (cb: () => void) => void } }).hot) {
+  (module as unknown as { hot: { dispose: (cb: () => void) => void } }).hot.dispose(() => {
+    teardownMusic();
+  });
 }
 
 export async function playSfx(name: SfxName) {

@@ -19,7 +19,7 @@ import { ShopContent } from '@/components/ui/shop-content';
 import { SkyBackground } from '@/components/ui/sky-background';
 import { getLegalUrls } from '@/constants/config';
 import {DisplayFont, MaxContentWidth, Palette, Spacing, Type} from '@/constants/theme';
-import { playMusic, playSfx, vibrate } from '@/services/audio';
+import { playMusic, playSfx, stopMusic, vibrate } from '@/services/audio';
 import {
   DAILY_BONUS_AMOUNT,
   dailyBonusRemaining,
@@ -42,6 +42,7 @@ export default function MenuScreen() {
 
   useEffect(() => {
     playMusic('menu');
+    return () => stopMusic();
   }, []);
 
   // Offer the chest on entry, the way the design presents it. The extra render
