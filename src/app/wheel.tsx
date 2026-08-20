@@ -40,7 +40,12 @@ const SEGMENTS: Segment[] = [
 ];
 
 const SEGMENT_ANGLE = 360 / SEGMENTS.length;
-const SPIN_DURATION_MS = 2600;
+/**
+ * Matches the length of the `tick` sfx (a wheel-spin clip with its own
+ * built-in deceleration), so the audio's slowdown lines up with the wheel's
+ * `Easing.out(Easing.cubic)` slowdown.
+ */
+const SPIN_DURATION_MS = 3580;
 
 type Phase = 'idle' | 'spinning' | 'result';
 
@@ -70,7 +75,6 @@ export default function WheelScreen() {
 
   const handleSpin = () => {
     if (!ready) return;
-    playSfx('tap');
     setPhase('spinning');
 
     const usingFreeSpin = freeSpins > 0;
@@ -83,6 +87,7 @@ export default function WheelScreen() {
     const index = Math.floor(Math.random() * SEGMENTS.length);
     const target = rotation.value + 360 * 5 + (360 - index * SEGMENT_ANGLE);
     rotation.value = withTiming(target, { duration: SPIN_DURATION_MS, easing: Easing.out(Easing.cubic) });
+    playSfx('tick'); // wheel-spin clip with its own click/deceleration, doubles as the tap feedback
 
     setTimeout(() => {
       setResult(SEGMENTS[index]);

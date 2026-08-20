@@ -6,7 +6,7 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer, type AudioSourc
 import * as Haptics from 'expo-haptics';
 
 export type MusicTrack = 'menu' | 'game';
-export type SfxName = 'win' | 'crash' | 'tap' | 'reward';
+export type SfxName = 'win' | 'crash' | 'tap' | 'reward' | 'tick';
 
 const SOURCES: Record<MusicTrack | SfxName, AudioSource | null> = {
   menu: require('@/assets/audio/music-menu.m4a'),
@@ -15,6 +15,7 @@ const SOURCES: Record<MusicTrack | SfxName, AudioSource | null> = {
   crash: require('@/assets/audio/sfx-crash.m4a'),
   tap: require('@/assets/audio/sfx-tap.m4a'),
   reward: require('@/assets/audio/sfx-reward.m4a'),
+  tick: require('@/assets/audio/sfx-tick.mp3'),
 };
 
 const MUSIC_VOLUME = 0.4;
